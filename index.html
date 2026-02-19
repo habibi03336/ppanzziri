@@ -1,0 +1,1558 @@
+<!DOCTYPE html>
+<html lang="ko">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>3000 생존 대시보드 (Prototype)</title>
+
+		<!-- Pretendard -->
+		<link rel="preconnect" href="https://cdn.jsdelivr.net" />
+		<link
+			rel="stylesheet"
+			as="style"
+			crossorigin
+			href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css"
+		/>
+
+		<!-- Chart.js -->
+		<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+		<style>
+			:root{
+			  --brand: #C4002F;
+			  --bg: #F2F2F2;
+			  --card: #FFFFFF;
+			  --text: #111111;
+			  --muted: #666666;
+			  --muted2: #999999;
+			  --border: #E5E5E5;
+			  --income: #1F3A8A;
+			  --expense: #C4002F;
+			  --radius: 20px;
+			  --shadow: 0 12px 30px rgba(0,0,0,.10);
+			}
+
+			*{ box-sizing: border-box; }
+			html,body{
+			  height:100%;
+			  margin: 0;
+			  padding: 0;
+			}
+			body{
+			  margin: 0 !important;
+			  font-family: "Pretendard Variable", Pretendard, system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans KR", sans-serif;
+			  color: var(--text);
+			  background: var(--brand);
+			  display:flex;
+			  align-items:center;
+			  justify-content:center;
+			  padding: 12px;
+			  overflow: hidden;
+			}
+
+			/* App frame */
+			.device{
+			  width: 100%;
+			  max-width: 390px;
+			  background: var(--bg);
+			  border-radius: 34px;
+			  box-shadow: var(--shadow);
+			  overflow: hidden;
+			  position: relative;
+			  border: 1px solid rgba(255,255,255,.15);
+			  min-height: 600px;
+			  height: min(860px, calc(100vh - 24px));
+			  display: flex;
+			  flex-direction: column;
+			}
+
+			/* Top bar */
+			.topbar{
+			  height: 56px;
+			  padding: 12px 16px;
+			  display:flex;
+			  align-items:center;
+			  justify-content: space-between;
+			  background: rgba(255,255,255,.65);
+			  backdrop-filter: blur(10px);
+			  border-bottom: 1px solid var(--border);
+			  position: sticky;
+			  top: 0;
+			  z-index: 20;
+			  flex-shrink: 0;
+			}
+			#asOf{
+			  margin: 0;
+			  color: var(--muted);
+			  font-size: 12px;
+			  font-weight: 700;
+			  white-space: nowrap;
+			}
+			.title{
+			  font-weight: 700;
+			  letter-spacing: -0.2px;
+			  display:flex;
+			  align-items:center;
+			  gap:8px;
+			  flex-wrap: nowrap;
+			  flex: 1;
+			  min-width: 0;
+			}
+			.title span{
+			  line-height: 1.3;
+			  display: -webkit-box;
+			  -webkit-line-clamp: 2;
+			  -webkit-box-orient: vertical;
+			  overflow: hidden;
+			  word-break: keep-all;
+			}
+			.title .character{ flex-shrink: 0; }
+			#asOf{ margin-left: 10px; flex-shrink: 0; }
+			.pill{
+			  font-size: 12px;
+			  padding: 4px 8px;
+			  border: 1px solid var(--border);
+			  border-radius: 999px;
+			  color: var(--muted);
+			  background: rgba(255,255,255,.9);
+			  white-space: nowrap;
+			}
+
+			/* Bottom tab bar */
+			.tabbar{
+			  height: 64px;
+			  background: rgba(255,255,255,.75);
+			  backdrop-filter: blur(10px);
+			  border-top: 1px solid var(--border);
+			  position: sticky;
+			  bottom: 0;
+			  left: 0;
+			  right: 0;
+			  display:flex;
+			  align-items:center;
+			  justify-content: space-around;
+			  padding: 10px 10px 14px;
+			  z-index: 30;
+			  flex-shrink: 0;
+			}
+			.tab{
+			  flex:1;
+			  display:flex;
+			  align-items:center;
+			  justify-content:center;
+			  gap:8px;
+			  cursor:pointer;
+			  user-select:none;
+			  color: var(--muted2);
+			  font-weight: 600;
+			  font-size: 13px;
+			}
+			.tab.active{ color: var(--brand); }
+
+			/* Sections */
+			.content{
+			  flex: 1;
+			  min-height: 0;
+			  overflow-y: auto;
+			  overflow-x: hidden;
+			  padding: 12px;
+			  overscroll-behavior: contain;
+			}
+			.screen{ display:none; }
+			.screen.active{ display:block; }
+
+			.card{
+			  background: var(--card);
+			  border: 1px solid var(--border);
+			  border-radius: var(--radius);
+			  padding: 14px;
+			  box-shadow: 0 1px 0 rgba(0,0,0,.02);
+			}
+			.quick-links{
+			  display: grid;
+			  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+			  gap: 10px;
+			}
+			.quick-link{
+			  display: flex;
+			  align-items: center;
+			  justify-content: center;
+			  gap: 8px;
+			  min-height: 48px;
+			  padding: 10px 14px;
+			  border-radius: 12px;
+			  border: 1px solid var(--border);
+			  background: #fff;
+			  color: var(--text);
+			  text-decoration: none;
+			  font-size: 13px;
+			  font-weight: 700;
+			}
+			.quick-link:hover{
+			  border-color: rgba(196,0,47,.35);
+			  color: var(--brand);
+			}
+			.quick-link .icon{
+			  width: 20px;
+			  height: 20px;
+			  display: inline-flex;
+			  align-items: center;
+			  justify-content: center;
+			  flex-shrink: 0;
+			}
+			.quick-link .icon svg{
+			  width: 100%;
+			  height: 100%;
+			  display: block;
+			}
+			.quick-link .label{
+			  line-height: 1;
+			  white-space: nowrap;
+			}
+			.quick-link .label.account{
+			  transform: translateX(-7px);
+			}
+			.quick-link.link{ padding-left: 0; }
+			.stack{ display:flex; flex-direction:column; gap: 12px; }
+
+			.hero{
+			  position: relative;
+			  overflow:hidden;
+			  padding-right: 90px;
+			}
+			.hero small{ color: var(--muted); font-weight: 600; }
+			.hero .balance{
+			  font-size: 36px;
+			  font-weight: 750;
+			  letter-spacing: -0.8px;
+			  margin-top: 6px;
+			  line-height: 1.05;
+			}
+			.hero .subline{
+			  margin-top: 8px;
+			  display:flex;
+			  gap: 10px;
+			  flex-wrap: wrap;
+			  align-items:center;
+			  color: var(--muted);
+			  font-size: 13px;
+			  font-weight: 600;
+			}
+			.hero .kpis{
+			  margin-top: 12px;
+			  display:grid;
+			  grid-template-columns: 1fr 1fr;
+			  gap: 10px;
+			}
+			.mini{
+			  border: 1px solid var(--border);
+			  border-radius: 14px;
+			  padding: 10px;
+			  background: rgba(242,242,242,.6);
+			}
+			.mini .label{ color: var(--muted); font-size: 12px; font-weight: 650; }
+			.mini .value{ margin-top: 6px; font-weight: 750; font-size: 15px; }
+
+			.chips{ margin-top: 12px; display:flex; gap:8px; flex-wrap: wrap; }
+			.chip{
+			  font-size: 12px;
+			  padding: 6px 10px;
+			  border-radius: 999px;
+			  border: 1px solid var(--border);
+			  background: rgba(255,255,255,.9);
+			  color: var(--text);
+			  font-weight: 650;
+			}
+
+			.character{
+			  top: 10px;
+			  right: 10px;
+			  width: 39px;
+			  height: 39px;
+			  border-radius: 16px;
+			  background: rgba(255,255,255,.7);
+			  border: 1px solid var(--border);
+			  display:flex;
+			  align-items:center;
+			  justify-content:center;
+			  overflow:hidden;
+			}
+			.character img{ width: 88px; height: 88px; object-fit: contain; transform: translateY(6px); }
+
+			.section-title{
+			  display:flex;
+			  align-items: baseline;
+			  justify-content: space-between;
+			  gap: 10px;
+			  padding: 0 2px;
+			}
+			.section-title h3{
+			  margin: 0;
+			  font-size: 16px;
+			  font-weight: 750;
+			  letter-spacing: -0.2px;
+			}
+			.section-title .hint{ color: var(--muted); font-size: 12px; font-weight: 650; }
+
+			.segmented{
+			  display:flex;
+			  gap: 8px;
+			  align-items:center;
+			}
+			.segbtn{
+			  font-size: 12px;
+			  padding: 6px 10px;
+			  border-radius: 999px;
+			  border: 1px solid var(--border);
+			  background: rgba(255,255,255,.9);
+			  color: var(--muted);
+			  font-weight: 700;
+			  cursor:pointer;
+			}
+			.segbtn.active{ color: var(--brand); border-color: rgba(196,0,47,.28); }
+
+			.chart-wrap{
+			  height: 180px;
+			  margin-top: 10px;
+			}
+
+			.two-col{
+			  display:grid;
+			  grid-template-columns: 1fr 1fr;
+			  gap: 10px;
+			  margin-top: 10px;
+			}
+
+			.big{
+			  font-size: 22px;
+			  font-weight: 800;
+			  letter-spacing: -0.4px;
+			  line-height: 1.1;
+			}
+			.muted{ color: var(--muted); font-weight: 600; font-size: 12px; }
+
+			.note{
+			  margin-top: 10px;
+			  color: var(--muted);
+			  font-size: 12px;
+			  font-weight: 650;
+			  line-height: 1.35;
+			  padding: 10px 12px;
+			  border-radius: 14px;
+			  background: rgba(242,242,242,.7);
+			  border: 1px solid var(--border);
+			}
+
+			/* Tag bar */
+			.bar{
+			  display:flex;
+			  overflow:hidden;
+			  border-radius: 999px;
+			  border: 1px solid var(--border);
+			  height: 14px;
+			  margin-top: 10px;
+			  background: #fff;
+			}
+			.bar > div{ height: 100%; }
+
+			.legend{
+			  margin-top: 10px;
+			  display:flex;
+			  flex-direction: column;
+			  gap: 6px;
+			}
+			.legend-item{
+			  display:flex;
+			  align-items:center;
+			  justify-content: space-between;
+			  gap: 10px;
+			  font-size: 13px;
+			  font-weight: 650;
+			}
+			.dot{
+			  width: 10px;
+			  height: 10px;
+			  border-radius: 999px;
+			  display:inline-block;
+			  margin-right: 8px;
+			  flex: 0 0 auto;
+			}
+			.legend-left{ display:flex; align-items:center; gap: 0px; color: var(--text); }
+			.legend-right{ color: var(--muted); font-weight: 700; font-size: 12px; white-space: nowrap; }
+
+			/* Records */
+			details{
+			  border: 1px solid var(--border);
+			  background: rgba(255,255,255,.92);
+			  border-radius: 16px;
+			  overflow:hidden;
+			}
+			summary{
+			  list-style:none;
+			  cursor:pointer;
+			  padding: 12px 12px;
+			  display:flex;
+			  align-items:center;
+			  justify-content: space-between;
+			  gap: 10px;
+			  font-weight: 750;
+			}
+			summary::-webkit-details-marker{ display:none; }
+			.summary-meta{ color: var(--muted); font-size: 12px; font-weight: 650; }
+			.row{
+			  padding: 10px 12px;
+			  border-top: 1px solid var(--border);
+			  display:flex;
+			  align-items:flex-start;
+			  justify-content: space-between;
+			  gap: 10px;
+			}
+			.row .left{ display:flex; flex-direction:column; gap: 4px; }
+			.row .right{ text-align:right; }
+			.badge{
+			  display:inline-flex;
+			  align-items:center;
+			  gap:6px;
+			  padding: 4px 8px;
+			  border-radius: 999px;
+			  border: 1px solid var(--border);
+			  font-size: 12px;
+			  font-weight: 750;
+			  width: fit-content;
+			}
+			.badge.expense{ color: var(--brand); }
+			.badge.income{ color: var(--income); }
+
+			.tiny{ font-size: 12px; color: var(--muted); font-weight: 650; }
+			.amount{ font-weight: 800; font-size: 14px; }
+
+			.linkish{
+			  display:inline-flex;
+			  align-items:center;
+			  gap:6px;
+			  margin-top: 10px;
+			  color: var(--brand);
+			  font-weight: 750;
+			  font-size: 13px;
+			  cursor:pointer;
+			  user-select:none;
+			}
+			.action-card{
+			  display: flex;
+			  flex-direction: column;
+			}
+			.action-card .linkish{
+			  margin-top: auto;
+			  padding-top: 10px;
+			  align-self: flex-start;
+			}
+
+			/* Proof */
+			.thumb{
+			  width: 100%;
+			  border-radius: 16px;
+			  border: 1px solid var(--border);
+			  overflow:hidden;
+			  background: #fff;
+			}
+			.thumb img{ width:100%; height: 180px; object-fit: cover; display:block; }
+
+			/* subtle scrollbar */
+			.content::-webkit-scrollbar{ width: 10px; }
+			.content::-webkit-scrollbar-thumb{ background: rgba(0,0,0,.12); border-radius: 999px; border: 3px solid rgba(0,0,0,0); background-clip: padding-box; }
+
+			/* 태블릿 */
+			@media (min-width: 768px) and (max-width: 1023px){
+			  .device{
+			    max-width: 600px;
+			    border-radius: 24px;
+			  }
+			  body{
+			    margin: 0 !important;
+			    padding: 0 20px 20px 20px !important;
+			    align-items: flex-start;
+			  }
+			  .device{
+			    margin-top: 20px;
+			    height: calc(100vh - 40px);
+			  }
+			  .topbar{
+			    padding: 16px 24px;
+			    height: 64px;
+			    top: 0;
+			    border-radius: 24px 24px 0 0;
+			  }
+			  .title{
+			    font-size: 18px;
+			    flex-wrap: wrap;
+			  }
+			  .title span{
+			    line-height: 1.4;
+			  }
+			  .tabbar{
+			    padding: 12px 16px 18px;
+			    height: 72px;
+			    border-radius: 0 0 24px 24px;
+			  }
+			  .tab{
+			    font-size: 14px;
+			  }
+			  .card{
+			    padding: 20px;
+			  }
+			  .hero .balance{
+			    font-size: 42px;
+			  }
+			  .section-title h3{
+			    font-size: 18px;
+			  }
+			  .chart-wrap{
+			    height: 220px;
+			  }
+			  .big{
+			    font-size: 24px;
+			  }
+			  #screen-home .stack{
+			    display: grid;
+			    grid-template-columns: 1fr 1fr;
+			    gap: 16px;
+			  }
+			  #screen-home .stack{
+			    grid-template-areas:
+			      "links links"
+			      "hero hero"
+			      "curve tags"
+			      "curve daily"
+			      "recent proof";
+			  }
+			  #screen-home .stack > .card:nth-child(1){ grid-area: links; }
+			  #screen-home .stack > .card:nth-child(2){ grid-area: hero; }
+			  #screen-home .stack > .card:nth-child(3){ grid-area: curve; }
+			  #screen-home .stack > .card:nth-child(4){ grid-area: daily; }
+			  #screen-home .stack > .card:nth-child(5){ grid-area: tags; }
+			  #screen-home .stack > .card:nth-child(6){ grid-area: recent; }
+			  #screen-home .stack > .card:nth-child(7){ grid-area: proof; }
+			  #screen-home .stack > .card{ min-width: 0; }
+			}
+
+			/* 데스크톱 */
+			@media (min-width: 1024px){
+			  .device{
+			    max-width: 1200px;
+			    width: 100%;
+			    border-radius: 24px;
+			  }
+			  body{
+			    margin: 0 !important;
+			    padding: 0 24px 24px 24px !important;
+			    align-items: flex-start;
+			  }
+			  .device{
+			    margin-top: 24px;
+			    height: calc(100vh - 48px);
+			  }
+			  .topbar{
+			    padding: 20px 32px;
+			    height: 72px;
+			    top: 0;
+			    border-radius: 24px 24px 0 0;
+			  }
+			  .title{
+			    font-size: 20px;
+			    flex-wrap: wrap;
+			  }
+			  .title span{
+			    line-height: 1.4;
+			  }
+			  .tabbar{
+			    padding: 16px 24px 20px;
+			    height: 80px;
+			    border-radius: 0 0 24px 24px;
+			  }
+			  .tab{
+			    font-size: 15px;
+			    gap: 10px;
+			  }
+			  .card{
+			    padding: 24px;
+			  }
+			  .stack{
+			    gap: 16px;
+			  }
+			  .hero{
+			    padding-right: 120px;
+			  }
+			  .hero .balance{
+			    font-size: 48px;
+			  }
+			  .hero .subline{
+			    font-size: 14px;
+			    margin-top: 10px;
+			  }
+			  .hero .kpis{
+			    margin-top: 16px;
+			    gap: 12px;
+			  }
+			  .mini{
+			    padding: 12px;
+			  }
+			  .mini .value{
+			    font-size: 18px;
+			  }
+			  .section-title h3{
+			    font-size: 20px;
+			  }
+			  .section-title .hint{
+			    font-size: 13px;
+			  }
+			  .chart-wrap{
+			    height: 280px;
+			  }
+			  .big{
+			    font-size: 28px;
+			  }
+			  .two-col{
+			    gap: 16px;
+			  }
+			  /* 홈 화면 데스크톱 배치
+			     links, hero는 전체폭
+			     생존 곡선은 좌측 2행, 우측 상/하에 태그/하루비용 배치 */
+			  #screen-home .stack{
+			    display: grid;
+			    grid-template-columns: repeat(2, minmax(0, 1fr));
+			    grid-template-areas:
+			      "links links"
+			      "hero hero"
+			      "curve tags"
+			      "curve daily"
+			      "recent proof";
+			    gap: 20px;
+			    align-items: stretch;
+			  }
+			  #screen-home .stack > .card:nth-child(1){ grid-area: links; }
+			  #screen-home .stack > .card:nth-child(2){ grid-area: hero; }
+			  #screen-home .stack > .card:nth-child(3){ grid-area: curve; }
+			  #screen-home .stack > .card:nth-child(4){ grid-area: daily; }
+			  #screen-home .stack > .card:nth-child(5){ grid-area: tags; }
+			  #screen-home .stack > .card:nth-child(6){ grid-area: recent; }
+			  #screen-home .stack > .card:nth-child(7){ grid-area: proof; }
+			  #screen-home .stack > .card{ min-width: 0; }
+			  .character{
+			    width: 48px;
+			    height: 48px;
+			    top: 12px;
+			    right: 12px;
+			  }
+			  .character img{
+			    width: 100px;
+			    height: 100px;
+			  }
+			}
+
+			/* 작은 화면 - 파일 끝에 배치하여 우선순위 확보 */
+			@media (max-width: 670px){
+			  body{ padding: 12px !important; }
+			}
+			@media (max-width: 430px){
+			  body{ padding: 8px !important; }
+			  .device{ width: 100vw; height: 100vh; border-radius: 0; }
+			  .quick-links{
+			    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+			  }
+			}
+		</style>
+	</head>
+	<body>
+		<div class="device" role="application" aria-label="3000 생존 대시보드">
+			<div class="topbar">
+				<div class="title">
+					<div class="character" aria-hidden="true">
+						<img src="assets/character.jpeg" alt="" />
+					</div>
+					<span>초기자금 3000만원으로 평생 뺀질거리기 챌린지</span>
+				</div>
+				<p id="asOf"></p>
+			</div>
+
+			<div class="content">
+				<!-- HOME -->
+				<section id="screen-home" class="screen active">
+					<div class="stack">
+						<div class="card quick-links" aria-label="외부 링크">
+							<a
+								class="quick-link youtube"
+								href="https://www.youtube.com/@ppanzziri"
+								target="_blank"
+								rel="noopener noreferrer"
+								aria-label="YouTube @ppanzziri"
+							>
+								<span class="icon" aria-hidden="true">
+									<svg viewBox="0 0 24 24" role="img" aria-hidden="true">
+										<rect x="1.5" y="4.5" width="21" height="15" rx="5" fill="#FF0000"></rect>
+										<polygon points="10,9 16,12 10,15" fill="#FFFFFF"></polygon>
+									</svg>
+								</span>
+								<span class="label account">@ppanzziri</span>
+							</a>
+							<a
+								class="quick-link instagram"
+								href="https://www.instagram.com/ppanzziri/"
+								target="_blank"
+								rel="noopener noreferrer"
+								aria-label="Instagram @ppanzziri"
+							>
+								<span class="icon" aria-hidden="true">
+									<svg viewBox="0 0 24 24" role="img" aria-hidden="true">
+										<defs>
+											<linearGradient id="igGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+												<stop offset="0%" stop-color="#F58529"></stop>
+												<stop offset="35%" stop-color="#DD2A7B"></stop>
+												<stop offset="70%" stop-color="#8134AF"></stop>
+												<stop offset="100%" stop-color="#515BD4"></stop>
+											</linearGradient>
+										</defs>
+										<rect x="2" y="2" width="20" height="20" rx="6" fill="url(#igGrad)"></rect>
+										<circle cx="12" cy="12" r="4.2" fill="none" stroke="#FFFFFF" stroke-width="1.8"></circle>
+										<circle cx="17.2" cy="6.8" r="1.25" fill="#FFFFFF"></circle>
+									</svg>
+								</span>
+								<span class="label account">@ppanzziri</span>
+							</a>
+							<!-- <a
+								class="quick-link link"
+								href="https://example.com/"
+								target="_blank"
+								rel="noopener noreferrer"
+							>
+								<span class="icon" aria-hidden="true">
+									<svg viewBox="0 0 24 24" role="img" aria-hidden="true">
+										<path d="M10.6 13.4a1 1 0 0 1 0-1.4l3.1-3.1a3 3 0 0 1 4.2 4.2l-2.5 2.5a3 3 0 0 1-4.2 0 1 1 0 1 1 1.4-1.4 1 1 0 0 0 1.4 0l2.5-2.5a1 1 0 1 0-1.4-1.4l-3.1 3.1a1 1 0 0 1-1.4 0z" fill="#111111"></path>
+										<path d="M13.4 10.6a1 1 0 0 1 0 1.4l-3.1 3.1a3 3 0 1 1-4.2-4.2l2.5-2.5a3 3 0 0 1 4.2 0 1 1 0 0 1-1.4 1.4 1 1 0 0 0-1.4 0l-2.5 2.5a1 1 0 0 0 1.4 1.4l3.1-3.1a1 1 0 0 1 1.4 0z" fill="#111111"></path>
+									</svg>
+								</span>
+								<span class="label">링크</span>
+							</a> -->
+						</div>
+
+						<div class="card hero">
+							<small>현재 잔액</small>
+							<div class="balance" id="balanceValue">₩—</div>
+							<div class="subline">
+								<span id="remainPct">—</span>
+							</div>
+
+							<div class="kpis">
+								<div class="mini">
+									<div class="label">누적 수입</div>
+									<div class="value" id="incomeTotal">₩—</div>
+								</div>
+								<div class="mini">
+									<div class="label">누적 지출</div>
+									<div class="value" id="expenseTotal">₩—</div>
+								</div>
+							</div>
+
+							<div class="chips" id="topTagsChips"></div>
+						</div>
+
+						<div class="card">
+							<div class="section-title">
+								<h3>생존 곡선</h3>
+								<div class="segmented">
+									<button class="segbtn active" data-range="30" id="range30">
+										30일
+									</button>
+									<button class="segbtn" data-range="all" id="rangeAll">
+										전체
+									</button>
+								</div>
+							</div>
+							<div class="chart-wrap">
+								<canvas id="balanceChart"></canvas>
+							</div>
+							<div class="two-col">
+								<div>
+									<div class="muted">최저 잔액</div>
+									<div class="big" id="minBalance">₩—</div>
+								</div>
+								<div>
+									<div class="muted">최고 잔액</div>
+									<div class="big" id="maxBalance">₩—</div>
+								</div>
+							</div>
+						</div>
+						<div class="card">
+							<div class="section-title">
+								<h3>어디에 쓰고 있나</h3>
+								<span class="hint">최근 30일 · 유효기준</span>
+							</div>
+							<div class="bar" id="tagBar"></div>
+							<div class="legend" id="tagLegend"></div>
+						</div>
+
+						<div class="card">
+							<div class="section-title">
+								<h3>하루 비용</h3>
+								<span class="hint">유효구간 기준</span>
+							</div>
+							<div class="two-col">
+								<div>
+									<div class="muted">전체 평균</div>
+									<div class="big" id="avgDailyAll">₩—</div>
+								</div>
+								<div>
+									<div class="muted">최근 30일</div>
+									<div class="big" id="avgDaily30">₩—</div>
+								</div>
+							</div>
+							<div class="note" id="runwayText">현재 속도라면 —</div>
+						</div>
+
+
+						<div class="card action-card">
+							<div class="section-title">
+								<h3>최근 기록</h3>
+								<span class="hint">최근 7일</span>
+							</div>
+							<div class="stack" id="recentRecords"></div>
+							<div class="linkish" id="goRecords">전체 기록 보기 →</div>
+						</div>
+
+						<div class="card action-card">
+							<div class="section-title">
+								<h3>잔액 인증</h3>
+								<span class="hint">최신 1건</span>
+							</div>
+							<div class="thumb" id="latestProof"></div>
+							<div class="linkish" id="goProof">전체 인증 보기 →</div>
+						</div>
+					</div>
+				</section>
+
+				<!-- RECORDS -->
+				<section id="screen-records" class="screen">
+					<div class="stack">
+						<div class="section-title">
+							<h3>기록</h3>
+							<span class="hint">거래일 기준</span>
+						</div>
+						<div class="stack" id="recordsByDay"></div>
+					</div>
+				</section>
+
+				<!-- PROOF -->
+				<section id="screen-proof" class="screen">
+					<div class="stack">
+						<div class="section-title">
+							<h3>인증</h3>
+							<span class="hint">최신순</span>
+						</div>
+						<div class="stack" id="proofList"></div>
+					</div>
+				</section>
+			</div>
+
+			<nav class="tabbar" aria-label="탭">
+				<div class="tab active" data-tab="home">홈</div>
+				<div class="tab" data-tab="records">기록</div>
+				<div class="tab" data-tab="proof">인증</div>
+			</nav>
+		</div>
+
+		<script>
+			// -------------------------
+			// Dummy data (prototype)
+			// -------------------------
+			const START_CAPITAL = 30000000;
+
+			// Records: transaction is reality
+			// Each record can have many effective segments
+			// Each record can have many tag splits (amounts sum to record amount)
+			const records = [
+			  {
+			    id: 1,
+			    type: 'expense',
+			    transaction_date: '2026-01-20',
+			    amount: 200000,
+			    memo: '4회차 모임 선결제',
+			    tags: [
+			      { name: '관계', amount: 120000 },
+			      { name: '경험', amount: 80000 }
+			    ],
+			    effective_segments: [
+			      { from: '2026-01-22', to: '2026-01-22', amount: 50000 },
+			      { from: '2026-01-29', to: '2026-01-29', amount: 50000 },
+			      { from: '2026-02-05', to: '2026-02-05', amount: 50000 },
+			      { from: '2026-02-12', to: '2026-02-12', amount: 50000 }
+			    ]
+			  },
+			  {
+			    id: 2,
+			    type: 'expense',
+			    transaction_date: '2026-01-28',
+			    amount: 480000,
+			    memo: '월세(2월)',
+			    tags: [
+			      { name: '생활', amount: 480000 }
+			    ],
+			    effective_segments: [
+			      { from: '2026-02-01', to: '2026-02-28', amount: 480000 }
+			    ]
+			  },
+			  {
+			    id: 3,
+			    type: 'income',
+			    transaction_date: '2026-02-03',
+			    amount: 350000,
+			    memo: '강의료 입금',
+			    tags: [
+			      { name: '지식노동', amount: 200000 },
+			      { name: '강좌비', amount: 150000 }
+			    ],
+			    effective_segments: [
+			      { from: '2026-01-15', to: '2026-02-02', amount: 350000 }
+			    ]
+			  },
+			  {
+			    id: 4,
+			    type: 'expense',
+			    transaction_date: '2026-02-06',
+			    amount: 24000,
+			    memo: '태국 음식',
+			    tags: [
+			      { name: '생활', amount: 10000 },
+			      { name: '경험', amount: 14000 }
+			    ],
+			    effective_segments: [
+			      { from: '2026-02-06', to: '2026-02-06', amount: 24000 }
+			    ]
+			  },
+			  {
+			    id: 5,
+			    type: 'expense',
+			    transaction_date: '2026-02-10',
+			    amount: 89000,
+			    memo: '교통 + 이동',
+			    tags: [
+			      { name: '이동', amount: 89000 }
+			    ],
+			    effective_segments: [
+			      { from: '2026-02-10', to: '2026-02-10', amount: 89000 }
+			    ]
+			  },
+			  {
+			    id: 6,
+			    type: 'income',
+			    transaction_date: '2026-02-14',
+			    amount: 120000,
+			    memo: '프리랜스 작업 선금',
+			    tags: [
+			      { name: '지식노동', amount: 120000 }
+			    ],
+			    effective_segments: [
+			      { from: '2026-02-01', to: '2026-02-14', amount: 120000 }
+			    ]
+			  },
+			  {
+			    id: 7,
+			    type: 'expense',
+			    transaction_date: '2026-02-16',
+			    amount: 32000,
+			    memo: '카페',
+			    tags: [
+			      { name: '생활', amount: 32000 }
+			    ],
+			    effective_segments: [
+			      { from: '2026-02-16', to: '2026-02-16', amount: 32000 }
+			    ]
+			  },
+			  {
+			    id: 8,
+			    type: 'expense',
+			    transaction_date: '2026-02-17',
+			    amount: 61000,
+			    memo: '장보기',
+			    tags: [
+			      { name: '생활', amount: 61000 }
+			    ],
+			    effective_segments: [
+			      { from: '2026-02-17', to: '2026-02-17', amount: 61000 }
+			    ]
+			  }
+			];
+
+			const certifications = [
+			  {
+			    date: '2026-02-17',
+			    balance: 0,
+			    photo_url: 'assets/brand_crimson.png'
+			  },
+			  {
+			    date: '2026-02-12',
+			    balance: 0,
+			    photo_url: 'assets/brand_crimson.png'
+			  }
+			];
+
+			// -------------------------
+			// Helpers
+			// -------------------------
+			const pad2 = (n) => String(n).padStart(2,'0');
+
+			function parseDate(s){
+			  // s: YYYY-MM-DD
+			  const [y,m,d] = s.split('-').map(Number);
+			  return new Date(y, m-1, d);
+			}
+
+			function fmtDateKR(s){
+			  const d = parseDate(s);
+			  return `${pad2(d.getMonth()+1)}.${pad2(d.getDate())}`;
+			}
+			function fmtDateKRFull(s){
+			  const d = parseDate(s);
+			  return `${d.getFullYear()}.${pad2(d.getMonth()+1)}.${pad2(d.getDate())}`;
+			}
+
+			function fmtKRW(n){
+			  const sign = n < 0 ? '-' : '';
+			  const abs = Math.abs(Math.round(n));
+			  return sign + '₩' + abs.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+			}
+			function fmtKRWMan(n){
+			  const sign = n < 0 ? '-' : '';
+			  const man = Math.floor(Math.abs(n) / 10000);
+			  return `${sign}₩${man.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}만`;
+			}
+
+			function daysBetweenInclusive(a, b){
+			  const da = parseDate(a);
+			  const db = parseDate(b);
+			  const ms = 24*60*60*1000;
+			  return Math.floor((db - da) / ms) + 1;
+			}
+
+			function addDays(dateObj, days){
+			  const d = new Date(dateObj);
+			  d.setDate(d.getDate() + days);
+			  return d;
+			}
+
+			function toISODate(d){
+			  const y = d.getFullYear();
+			  const m = pad2(d.getMonth()+1);
+			  const dd = pad2(d.getDate());
+			  return `${y}-${m}-${dd}`;
+			}
+
+			function sortByDateAsc(arr, key){
+			  return [...arr].sort((a,b)=>parseDate(a[key]) - parseDate(b[key]));
+			}
+
+			// -------------------------
+			// Calculations
+			// -------------------------
+			const recordsAsc = sortByDateAsc(records, 'transaction_date');
+
+			const totalIncome = recordsAsc.filter(r=>r.type==='income').reduce((s,r)=>s+r.amount,0);
+			const totalExpense = recordsAsc.filter(r=>r.type==='expense').reduce((s,r)=>s+r.amount,0);
+			const currentBalance = START_CAPITAL + totalIncome - totalExpense;
+
+			// balance series by transaction day
+			const balanceSeries = [];
+			let bal = START_CAPITAL;
+			for (const r of recordsAsc){
+			  bal += (r.type==='income' ? r.amount : -r.amount);
+			  balanceSeries.push({ date: r.transaction_date, balance: bal });
+			}
+
+			const minBal = Math.min(...balanceSeries.map(x=>x.balance), START_CAPITAL);
+			const maxBal = Math.max(...balanceSeries.map(x=>x.balance), START_CAPITAL);
+
+			// Effective daily expense allocation
+			// Allocate each segment amount evenly across its inclusive day range.
+			function buildDailyEffectiveMap(type){
+			  const map = new Map(); // date -> amount
+			  for (const r of records){
+			    if (r.type !== type) continue;
+			    for (const seg of r.effective_segments){
+			      const days = daysBetweenInclusive(seg.from, seg.to);
+			      const perDay = seg.amount / days;
+			      const start = parseDate(seg.from);
+			      for (let i=0;i<days;i++){
+			        const d = toISODate(addDays(start,i));
+			        map.set(d, (map.get(d) || 0) + perDay);
+			      }
+			    }
+			  }
+			  return map;
+			}
+
+			const dailyExpenseEff = buildDailyEffectiveMap('expense');
+
+			function averageDailyFromMap(map, startISO, endISO){
+			  const start = parseDate(startISO);
+			  const end = parseDate(endISO);
+			  const ms = 24*60*60*1000;
+			  const days = Math.floor((end - start)/ms) + 1;
+			  if (days <= 0) return 0;
+			  let total = 0;
+			  for (let i=0;i<days;i++){
+			    const d = toISODate(addDays(start,i));
+			    total += (map.get(d) || 0);
+			  }
+			  return total / days;
+			}
+
+			// Determine "as of" date as latest transaction date
+			const asOfDate = balanceSeries.length ? balanceSeries[balanceSeries.length-1].date : toISODate(new Date());
+
+			// Range endpoints
+			const asOfObj = parseDate(asOfDate);
+			const start30 = toISODate(addDays(asOfObj, -29));
+
+			const earliestEffDate = (()=>{
+			  let min = null;
+			  for (const [d] of dailyExpenseEff.entries()){
+			    if (!min || parseDate(d) < parseDate(min)) min = d;
+			  }
+			  return min || start30;
+			})();
+
+			const avgAll = averageDailyFromMap(dailyExpenseEff, earliestEffDate, asOfDate);
+			const avg30 = averageDailyFromMap(dailyExpenseEff, start30, asOfDate);
+
+			const runwayDays = avg30 > 0 ? Math.floor(currentBalance / avg30) : null;
+
+			// Tag proportions for last 30 days (effective 기준)
+			// Approach: For each record, take tag share ratios based on record tag amounts.
+			// For each effective segment, distribute its allocated daily amounts by the same ratios.
+			function tagTotalsEffectiveLast30(){
+			  const totals = new Map();
+			  const start = parseDate(start30);
+			  const end = parseDate(asOfDate);
+			  const ms = 24*60*60*1000;
+			  const daysRange = Math.floor((end - start)/ms) + 1;
+
+			  // Pre-compute which dates are in range
+			  const inRange = new Set();
+			  for (let i=0;i<daysRange;i++) inRange.add(toISODate(addDays(start,i)));
+
+			  for (const r of records){
+			    if (r.type !== 'expense') continue; // tag 비중은 지출 중심으로
+			    const totalTag = r.tags.reduce((s,t)=>s+t.amount,0) || r.amount;
+			    const ratios = r.tags.map(t=>({ name: t.name, ratio: (t.amount/totalTag) }));
+
+			    for (const seg of r.effective_segments){
+			      const days = daysBetweenInclusive(seg.from, seg.to);
+			      const perDay = seg.amount / days;
+			      const startSeg = parseDate(seg.from);
+			      for (let i=0;i<days;i++){
+			        const dateISO = toISODate(addDays(startSeg,i));
+			        if (!inRange.has(dateISO)) continue;
+			        for (const rr of ratios){
+			          totals.set(rr.name, (totals.get(rr.name) || 0) + perDay * rr.ratio);
+			        }
+			      }
+			    }
+			  }
+
+			  return totals;
+			}
+
+			const tagTotals30 = tagTotalsEffectiveLast30();
+
+			// recent records (last 7 days by transaction date)
+			function recordsInLastNDays(n){
+			  const end = parseDate(asOfDate);
+			  const start = addDays(end, -(n-1));
+			  return records.filter(r=>{
+			    const d = parseDate(r.transaction_date);
+			    return d >= start && d <= end;
+			  }).sort((a,b)=>parseDate(b.transaction_date) - parseDate(a.transaction_date));
+			}
+			const recent7 = recordsInLastNDays(7);
+
+			// group records by transaction day (for Records tab)
+			function groupByTransactionDate(){
+			  const map = new Map();
+			  for (const r of records){
+			    const key = r.transaction_date;
+			    if (!map.has(key)) map.set(key, []);
+			    map.get(key).push(r);
+			  }
+			  // sort by date desc
+			  const keys = [...map.keys()].sort((a,b)=>parseDate(b) - parseDate(a));
+			  return keys.map(k=>({ date: k, items: map.get(k).sort((a,b)=>b.id-a.id) }));
+			}
+
+			// -------------------------
+			// Render
+			// -------------------------
+			document.getElementById('asOf').textContent = `${fmtDateKRFull(asOfDate)}`;
+
+			document.getElementById('balanceValue').textContent = fmtKRW(currentBalance);
+			const pct = (currentBalance / START_CAPITAL) * 100;
+			document.getElementById('remainPct').textContent = `3000만원 대비 ${pct.toFixed(1)}%`;
+
+			document.getElementById('incomeTotal').textContent = fmtKRW(totalIncome);
+			document.getElementById('expenseTotal').textContent = fmtKRW(totalExpense);
+
+			// Top tags chips (from last 30 days)
+			function renderTopTagsChips(){
+			  const el = document.getElementById('topTagsChips');
+			  el.innerHTML = '';
+			  const arr = [...tagTotals30.entries()].sort((a,b)=>b[1]-a[1]);
+			  const total = arr.reduce((s,[_k,v])=>s+v,0) || 1;
+			  const top = arr.slice(0,3);
+			  for (const [name, val] of top){
+			    const pct = Math.round((val/total)*100);
+			    const chip = document.createElement('div');
+			    chip.className = 'chip';
+			    chip.textContent = `${name} ${pct}%`;
+			    el.appendChild(chip);
+			  }
+			  if (top.length === 0){
+			    const chip = document.createElement('div');
+			    chip.className = 'chip';
+			    chip.textContent = '태그 데이터 없음';
+			    el.appendChild(chip);
+			  }
+			}
+			renderTopTagsChips();
+
+			// Daily cost
+			document.getElementById('avgDailyAll').textContent = fmtKRW(avgAll);
+			document.getElementById('avgDaily30').textContent = fmtKRW(avg30);
+
+			document.getElementById('runwayText').textContent = runwayDays !== null
+			  ? `현재 속도라면 ${runwayDays}일 후 뺀질이 생활이 종료될 것으로 예상됩니다.`
+			  : '최근 30일 지출 데이터가 부족합니다.';
+
+			// Tag bar
+			function renderTagBar(){
+			  const bar = document.getElementById('tagBar');
+			  const legend = document.getElementById('tagLegend');
+			  bar.innerHTML = '';
+			  legend.innerHTML = '';
+
+			  const items = [...tagTotals30.entries()].sort((a,b)=>b[1]-a[1]);
+			  const total = items.reduce((s,[_k,v])=>s+v,0) || 1;
+
+			  // take top 5, rest -> 기타
+			  const top = items.slice(0,5);
+			  const rest = items.slice(5);
+			  const restSum = rest.reduce((s,[_k,v])=>s+v,0);
+			  const final = [...top];
+			  if (restSum > 0) final.push(['기타', restSum]);
+
+			  // colors: first uses income blue? keep palette restrained
+			  const colors = [
+			    '#111111',
+			    '#1F3A8A',
+			    '#C4002F',
+			    '#D48FA3',
+			    '#444444',
+			    '#BDBDBD'
+			  ];
+
+			  final.forEach(([name, val], idx)=>{
+			    const w = (val/total)*100;
+			    const seg = document.createElement('div');
+			    seg.style.width = `${w}%`;
+			    seg.style.background = colors[idx % colors.length];
+			    bar.appendChild(seg);
+
+			    const li = document.createElement('div');
+			    li.className = 'legend-item';
+			    const left = document.createElement('div');
+			    left.className = 'legend-left';
+			    const dot = document.createElement('span');
+			    dot.className = 'dot';
+			    dot.style.background = colors[idx % colors.length];
+			    left.appendChild(dot);
+			    left.appendChild(document.createTextNode(name));
+
+			    const right = document.createElement('div');
+			    right.className = 'legend-right';
+			    right.textContent = `${Math.round(w)}% · ${fmtKRW(val)}`;
+
+			    li.appendChild(left);
+			    li.appendChild(right);
+			    legend.appendChild(li);
+			  });
+
+			  if (final.length === 0){
+			    const li = document.createElement('div');
+			    li.className = 'tiny';
+			    li.textContent = '최근 30일 태그 데이터가 없습니다.';
+			    legend.appendChild(li);
+			  }
+			}
+			renderTagBar();
+
+			// Recent records summary (accordion)
+			function renderRecentRecords(){
+			  const wrap = document.getElementById('recentRecords');
+			  wrap.innerHTML = '';
+
+			  const groups = new Map();
+			  for (const r of recent7){
+			    if (!groups.has(r.transaction_date)) groups.set(r.transaction_date, []);
+			    groups.get(r.transaction_date).push(r);
+			  }
+
+			  const dates = [...groups.keys()].sort((a,b)=>parseDate(b)-parseDate(a));
+			  for (const d of dates){
+			    const items = groups.get(d);
+			    const exp = items.filter(x=>x.type==='expense').reduce((s,x)=>s+x.amount,0);
+			    const inc = items.filter(x=>x.type==='income').reduce((s,x)=>s+x.amount,0);
+
+			    const det = document.createElement('details');
+			    det.open = false;
+			    const sum = document.createElement('summary');
+			    sum.innerHTML = `
+			      <div>
+			        <div>${fmtDateKR(d)}</div>
+			        <div class="summary-meta">지출 ${fmtKRW(exp)} · 수입 ${fmtKRW(inc)}</div>
+			      </div>
+			      <div class="summary-meta">열기</div>
+			    `;
+			    det.appendChild(sum);
+
+			    for (const r of items){
+			      const row = document.createElement('div');
+			      row.className = 'row';
+			      const badgeClass = r.type==='expense' ? 'expense' : 'income';
+			      const sign = r.type==='expense' ? '-' : '+';
+			      const amtColor = r.type==='expense' ? 'var(--brand)' : 'var(--income)';
+			      row.innerHTML = `
+			        <div class="left">
+			          <div class="badge ${badgeClass}">${r.type==='expense' ? '지출' : '수입'} · ${r.memo}</div>
+			          <div class="tiny">태그 ${r.tags.map(t=>t.name).join(', ')}</div>
+			        </div>
+			        <div class="right">
+			          <div class="amount" style="color:${amtColor}">${sign}${fmtKRW(r.amount).replace('₩','')}</div>
+			          <div class="tiny">유효 ${r.effective_segments.length}개</div>
+			        </div>
+			      `;
+			      det.appendChild(row);
+			    }
+			    wrap.appendChild(det);
+			  }
+
+			  if (dates.length === 0){
+			    const div = document.createElement('div');
+			    div.className = 'tiny';
+			    div.textContent = '최근 7일 기록이 없습니다.';
+			    wrap.appendChild(div);
+			  }
+			}
+			renderRecentRecords();
+
+			// Proof (latest 1 on home)
+			function renderProof(){
+			  const latest = [...certifications].sort((a,b)=>parseDate(b.date)-parseDate(a.date))[0];
+			  const home = document.getElementById('latestProof');
+			  home.innerHTML = `
+			    <img src="${latest.photo_url}" alt="잔액 인증(placeholder)" />
+			  `;
+
+			  const list = document.getElementById('proofList');
+			  list.innerHTML = '';
+			  const sorted = [...certifications].sort((a,b)=>parseDate(b.date)-parseDate(a.date));
+			  for (const c of sorted){
+			    const card = document.createElement('div');
+			    card.className = 'card';
+			    card.innerHTML = `
+			      <div class="section-title" style="margin-bottom:10px;">
+			        <h3>${fmtDateKR(c.date)} 인증</h3>
+			        <span class="hint">잔액 확인</span>
+			      </div>
+			      <div class="thumb"><img src="${c.photo_url}" alt="인증 이미지(placeholder)" /></div>
+			    `;
+			    list.appendChild(card);
+			  }
+			}
+			renderProof();
+
+			// Records tab (group by day)
+			function renderRecordsTab(){
+			  const wrap = document.getElementById('recordsByDay');
+			  wrap.innerHTML = '';
+
+			  const groups = groupByTransactionDate();
+			  for (const g of groups){
+			    const exp = g.items.filter(x=>x.type==='expense').reduce((s,x)=>s+x.amount,0);
+			    const inc = g.items.filter(x=>x.type==='income').reduce((s,x)=>s+x.amount,0);
+
+			    const det = document.createElement('details');
+			    det.open = false;
+			    const sum = document.createElement('summary');
+			    sum.innerHTML = `
+			      <div>
+			        <div>${fmtDateKR(g.date)}</div>
+			        <div class="summary-meta">지출 ${fmtKRW(exp)} · 수입 ${fmtKRW(inc)}</div>
+			      </div>
+			      <div class="summary-meta">${g.items.length}건</div>
+			    `;
+			    det.appendChild(sum);
+
+			    for (const r of g.items){
+			      const row = document.createElement('div');
+			      row.className = 'row';
+			      const badgeClass = r.type==='expense' ? 'expense' : 'income';
+			      const sign = r.type==='expense' ? '-' : '+';
+			      const amtColor = r.type==='expense' ? 'var(--brand)' : 'var(--income)';
+			      row.innerHTML = `
+			        <div class="left">
+			          <div class="badge ${badgeClass}">${r.type==='expense' ? '지출' : '수입'} · ${r.memo}</div>
+			          <div class="tiny">태그 ${r.tags.map(t=>`${t.name}(${fmtKRW(t.amount)})`).join(' · ')}</div>
+			        </div>
+			        <div class="right">
+			          <div class="amount" style="color:${amtColor}">${sign}${fmtKRW(r.amount).replace('₩','')}</div>
+			          <div class="tiny">유효구간 ${r.effective_segments.length}개</div>
+			        </div>
+			      `;
+			      det.appendChild(row);
+
+			      // Effective segments
+			      const segWrap = document.createElement('div');
+			      segWrap.className = 'row';
+			      segWrap.style.background = 'rgba(242,242,242,.6)';
+			      segWrap.innerHTML = `
+			        <div class="left">
+			          <div class="tiny">유효 구간</div>
+			          <div class="tiny">${r.effective_segments.map(s=>`${fmtDateKR(s.from)}~${fmtDateKR(s.to)} ${fmtKRW(s.amount)}`).join('<br/>')}</div>
+			        </div>
+			        <div class="right"></div>
+			      `;
+			      det.appendChild(segWrap);
+			    }
+
+			    wrap.appendChild(det);
+			  }
+			}
+			renderRecordsTab();
+
+			// Chart
+			let chart;
+			let currentChartRange = '30';
+			function buildChart(range){
+			  currentChartRange = range;
+			  const ctx = document.getElementById('balanceChart');
+			  const data = balanceSeries;
+
+			  let sliced = data;
+			  if (range === '30'){
+			    const start = parseDate(start30);
+			    sliced = data.filter(p => parseDate(p.date) >= start);
+			    // ensure at least one point: include last point
+			    if (sliced.length === 0 && data.length) sliced = [data[data.length-1]];
+			  }
+
+			  const labels = sliced.map(p => fmtDateKR(p.date));
+			  const values = sliced.map(p => Math.round(p.balance));
+
+			  // Compute min/max for current chart range
+			  const minV = Math.min(...values, START_CAPITAL);
+			  const maxV = Math.max(...values, START_CAPITAL);
+			  const useCompact = window.matchMedia('(min-width: 768px) and (max-width: 1023px)').matches;
+			  document.getElementById('minBalance').textContent = useCompact ? fmtKRWMan(minV) : fmtKRW(minV);
+			  document.getElementById('maxBalance').textContent = useCompact ? fmtKRWMan(maxV) : fmtKRW(maxV);
+
+			  const baseline = new Array(values.length).fill(START_CAPITAL);
+
+			  if (chart) chart.destroy();
+			  chart = new Chart(ctx, {
+			    type: 'line',
+			    data: {
+			      labels,
+			      datasets: [
+			        {
+			          label: '잔액',
+			          data: values,
+			          borderColor: '#111111',
+			          borderWidth: 2,
+			          pointRadius: 0,
+			          tension: 0.25
+			        },
+			        {
+			          label: '기준선',
+			          data: baseline,
+			          borderColor: '#BDBDBD',
+			          borderWidth: 1,
+			          pointRadius: 0,
+			          borderDash: [4,4],
+			          tension: 0
+			        }
+			      ]
+			    },
+			    options: {
+			      responsive: true,
+			      maintainAspectRatio: false,
+			      plugins: {
+			        legend: { display: false },
+			        tooltip: {
+			          callbacks: {
+			            label: (ctx) => `${ctx.dataset.label}: ${fmtKRW(ctx.parsed.y)}`
+			          }
+			        }
+			      },
+			      scales: {
+			        x: {
+			          grid: { display: false },
+			          ticks: { color: '#999', maxTicksLimit: 6, font: { size: 11, weight: '600' } }
+			        },
+			        y: {
+			          grid: { color: 'rgba(0,0,0,.06)' },
+			          ticks: {
+			            color: '#999',
+			            maxTicksLimit: 5,
+			            font: { size: 11, weight: '600' },
+			            callback: (v) => {
+			              // show in 만원 단위
+			              const man = Math.round(v / 10000);
+			              return `${man}만`;
+			            }
+			          }
+			        }
+			      }
+			    }
+			  });
+			}
+			buildChart('30');
+
+			document.getElementById('range30').addEventListener('click', () => {
+			  document.getElementById('range30').classList.add('active');
+			  document.getElementById('rangeAll').classList.remove('active');
+			  buildChart('30');
+			});
+			document.getElementById('rangeAll').addEventListener('click', () => {
+			  document.getElementById('rangeAll').classList.add('active');
+			  document.getElementById('range30').classList.remove('active');
+			  buildChart('all');
+			});
+			window.addEventListener('resize', () => buildChart(currentChartRange));
+
+			// Tabs
+			const tabs = document.querySelectorAll('.tab');
+			const screens = {
+			  home: document.getElementById('screen-home'),
+			  records: document.getElementById('screen-records'),
+			  proof: document.getElementById('screen-proof')
+			};
+
+			function setTab(name){
+			  tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+			  Object.entries(screens).forEach(([k,el]) => el.classList.toggle('active', k === name));
+			  // scroll to top on change
+			  document.querySelector('.content').scrollTop = 0;
+			}
+
+			tabs.forEach(t => t.addEventListener('click', () => setTab(t.dataset.tab)));
+			document.getElementById('goRecords').addEventListener('click', () => setTab('records'));
+			document.getElementById('goProof').addEventListener('click', () => setTab('proof'));
+		</script>
+	</body>
+</html>
