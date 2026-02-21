@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="700" viewBox="0 0 1200 700" role="img" aria-label="2026-02-17 인증 이미지">
+  <defs>
+    <linearGradient id="g1" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#f4d5df"/>
+      <stop offset="100%" stop-color="#c4002f"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="700" fill="url(#g1)"/>
+  <rect x="80" y="80" width="1040" height="540" rx="28" fill="#ffffff" fill-opacity="0.88"/>
+  <text x="130" y="250" font-size="56" font-family="Pretendard, Arial, sans-serif" font-weight="700" fill="#111111">3000 생존 대시보드</text>
+  <text x="130" y="340" font-size="92" font-family="Pretendard, Arial, sans-serif" font-weight="800" fill="#c4002f">₩29,564,000</text>
+  <text x="130" y="420" font-size="38" font-family="Pretendard, Arial, sans-serif" fill="#555555">인증일: 2026.02.17</text>
+</svg>

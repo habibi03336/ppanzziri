@@ -150,15 +150,24 @@
 - 유형 (지출 / 수입)
 - 돈이 이동한 날짜
 - 총 금액
-- 유효 구간 (여러 개 가능)
-- 태그 (여러 개 가능)
+- 유효 구간 (옵션: 기본은 자동, 필요 시 여러 개 직접 입력)
+- 태그 (기존 태그 다중 선택 + 필요 시 신규 태그 추가)
 - 인증 사진 (선택)
 
 검증 원칙:
 
-- 유효 구간의 금액 합 = 총 금액
-- 태그 금액 합 = 총 금액
+- 유효 구간 직접 입력 시 유효 구간의 금액 합 = 총 금액
+- 태그 금액은 UI에서 직접 입력하지 않고, 선택된 태그 기준으로 총 금액을 자동 분배
 - 시간 순서의 논리적 일관성 유지
+
+## 5.2 어드민 입력 UX
+
+- 입력 페이지는 `/admin` 경로로 직접 진입한다. (퍼블릭 조회 화면에서 버튼 노출 없음)
+- 어드민 탭은 다음 3개로 분리한다.
+  - 기록입력
+  - 인증입력
+  - 기록삭제
+- 관리자 비밀번호는 설정 UI에서 변경하며, 클라이언트 로컬 저장소에 보관해 재사용한다.
 
 # 6. 시스템 구조
 
@@ -171,15 +180,50 @@
 - 집계와 해석은 프론트엔드에서 수행
 - 백엔드는 원본 데이터를 보존
 
+## 6.2 이미지 저장/서빙 구조
+
+> 입력 화면에서 업로드되는 사진 파일은 백엔드가 직접 저장하지 않고, AWS S3에 저장한 뒤 CloudFront URL로 서빙한다.
+> 
+- 프론트엔드는 기록/인증 입력 시 사진을 **파일 업로드**로 전달한다.
+- 백엔드는 업로드 파일을 S3 버킷에 저장한다.
+- 저장 완료 후 백엔드는 CloudFront 배포 도메인 기준의 공개 URL을 생성한다.
+- DB에는 원본 바이너리 대신 `photo_url`(CloudFront URL)만 저장한다.
+- 조회 API는 해당 `photo_url`을 그대로 반환한다.
+
 # 7. 구현 상세
 
 ## API
 
+- `GET /dashboard`
 - `GET /budget/records`
 - `POST /budget/records`
 - `DELETE /budget/records/{id}`
 - `GET /budget/tags`
+- `GET /budget/certifications`
 - `POST /budget/certifications`
+- `DELETE /budget/certifications/{date}`
+
+### 조회 응답 규칙
+
+- 퍼블릭 조회 화면은 `GET /dashboard` 단일 응답을 기준으로 렌더링한다.
+- `GET /dashboard`는 최소 다음 필드를 포함한다.
+  - `startCapital`
+  - `records[]`
+  - `certifications[]`
+
+### 파일 업로드 규칙
+
+- `POST /budget/records`
+  - `multipart/form-data` 지원
+  - 텍스트 payload + 사진 파일을 함께 전송
+  - 백엔드는 사진 파일을 S3에 저장 후 `photo_url`을 CloudFront URL로 기록
+- `POST /budget/certifications`
+  - `multipart/form-data` 지원
+  - 인증 날짜 + 사진 파일 전송
+  - 백엔드는 사진 파일을 S3에 저장 후 `photo_url`을 CloudFront URL로 기록
+- `DELETE /budget/certifications/{date}`
+  - 선택한 날짜 기준 인증 내역 삭제를 지원한다.
+- `GET` 계열 응답의 `photo_url`은 CloudFront URL이어야 한다.
 
 ---
 
@@ -193,6 +237,10 @@
 - amount
 - photo_url
 - created_at
+
+`photo_url`:
+- 값은 CloudFront 서빙 URL
+- 예: `https://cdn.example.com/budget/records/2026/02/uuid.jpg`
 
 ### budget_effective_segments
 
@@ -215,3 +263,7 @@
 - date
 - photo_url
 - created_at
+
+`photo_url`:
+- 값은 CloudFront 서빙 URL
+- 예: `https://cdn.example.com/budget/certifications/2026/02/uuid.jpg`

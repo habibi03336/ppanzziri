@@ -1,0 +1,309 @@
+.admin-root {
+  min-height: 100vh;
+  background: #f6f6f6;
+  color: #111;
+  padding: 24px;
+}
+
+.admin-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.admin-header h1 {
+  margin: 0;
+  font-size: 28px;
+}
+
+.admin-header p {
+  margin: 8px 0 0;
+  color: #666;
+}
+
+.admin-grid {
+  display: grid;
+  grid-template-columns: 1.3fr 0.9fr;
+  gap: 12px;
+}
+
+.admin-tab-panel {
+  margin-top: 20px;
+}
+
+.admin-card {
+  border: 1px solid #e5e5e5;
+  background: #fff;
+  border-radius: 14px;
+  padding: 14px;
+}
+
+.admin-card h2 {
+  margin: 0 0 10px;
+  font-size: 18px;
+}
+
+.admin-settings {
+  margin-top: 12px;
+}
+
+.admin-settings-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.admin-settings-message {
+  margin: 10px 0 0;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.admin-settings-message.error {
+  color: #b1002b;
+}
+
+.admin-settings-message.success {
+  color: #0a6d24;
+}
+
+.admin-tabs {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.admin-tab {
+  border: 1px solid #d8d8d8;
+  background: #fff;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-tab.active {
+  border-color: #c4002f;
+  color: #c4002f;
+  background: #fff4f7;
+}
+
+.admin-h2-gap {
+  margin-top: 20px !important;
+}
+
+.admin-error {
+  margin-top: 12px;
+  border-color: #ffccd9;
+  background: #fff3f7;
+  color: #b1002b;
+}
+
+.admin-notice {
+  margin-top: 12px;
+  border-color: #d6efdb;
+  background: #f4fff6;
+  color: #0a6d24;
+}
+
+.admin-form {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-row {
+  display: grid;
+  gap: 8px;
+}
+
+.admin-row.two {
+  grid-template-columns: 1fr 1fr;
+}
+
+.admin-row.three {
+  grid-template-columns: 1fr 1fr 1fr auto;
+}
+
+.admin-row.tag {
+  grid-template-columns: 1fr auto;
+}
+
+.admin-row.tag-add {
+  grid-template-columns: 1fr auto;
+}
+
+.admin-label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.admin-form label {
+  display: grid;
+  gap: 6px;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.admin-input {
+  width: 100%;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  background: #fff;
+  padding: 10px 12px;
+  font-size: 14px;
+}
+
+.admin-subtitle {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #666;
+  font-weight: 700;
+}
+
+.admin-section {
+  border: 1px solid #ececec;
+  border-radius: 12px;
+  background: #fafafa;
+  padding: 10px;
+  display: grid;
+  gap: 10px;
+}
+
+.admin-section h3 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.tag-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tag-option {
+  border: 1px solid #d9d9d9;
+  background: #fff;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.tag-option.active {
+  border-color: #c4002f;
+  color: #c4002f;
+  background: #fff5f8;
+}
+
+.selected-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.selected-tag {
+  border: 1px solid #e2e2e2;
+  background: #fff;
+  border-radius: 999px;
+  padding: 5px 9px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.admin-toggle {
+  display: flex !important;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.admin-btn {
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  background: #fff;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.admin-btn.primary {
+  border-color: #c4002f;
+  background: #c4002f;
+  color: #fff;
+  font-weight: 700;
+}
+
+.admin-btn.ghost {
+  background: #fafafa;
+}
+
+.admin-btn.danger {
+  border-color: #ffccd9;
+  color: #b1002b;
+  background: #fff4f8;
+}
+
+.admin-list {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 8px;
+}
+
+.admin-record-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.admin-record-item {
+  border: 1px solid #ebebeb;
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+  background: #fff;
+}
+
+.admin-record-main {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.admin-record-date {
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+.admin-record-meta {
+  font-size: 13px;
+  color: #555;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+@media (max-width: 980px) {
+  .admin-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-row.two,
+  .admin-row.three {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-record-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .admin-tabs {
+    grid-template-columns: 1fr;
+  }
+}
