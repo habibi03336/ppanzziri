@@ -1,27 +1,41 @@
 import { fmtKRW } from '../../utils/format.js';
 
-export default function HeroBalanceCard({ currentBalance, startCapital, totalIncome, totalExpense, topTags }) {
-  const pct = ((currentBalance / startCapital) * 100).toFixed(1);
+function fmtPct(pct) {
+  if (pct === null || Number.isNaN(pct)) return '-';
+  const sign = pct > 0 ? '+' : '';
+  return `${sign}${pct.toFixed(2)}%`;
+}
 
+function changeClass(amount) {
+  if (amount > 0) return 'up';
+  if (amount < 0) return 'down';
+  return 'flat';
+}
+
+function changeArrow(amount) {
+  if (amount > 0) return '▲';
+  if (amount < 0) return '▼';
+  return '→';
+}
+
+export default function HeroBalanceCard({ currentBalance, dayChange, monthChange }) {
   return (
     <section className="card">
-      <p className="eyebrow">현재 잔액</p>
-      <p className="balance">{fmtKRW(currentBalance)}</p>
-      <p className="muted">3000만원 대비 {pct}%</p>
-      <div className="hero-kpis">
+      <div className="balance-row">
         <div>
-          <p className="eyebrow">누적 수입</p>
-          <p className="kpi">{fmtKRW(totalIncome)}</p>
+          <p className="eyebrow">현재 잔액</p>
+          <p className="balance">{fmtKRW(currentBalance)}</p>
         </div>
-        <div>
-          <p className="eyebrow">누적 지출</p>
-          <p className="kpi">{fmtKRW(totalExpense)}</p>
+        <div className="balance-changes">
+          <div className={`balance-change ${changeClass(dayChange?.amount || 0)}`}>
+            <span className="label">전일 대비</span>
+            <span className="value">{changeArrow(dayChange?.amount || 0)} {fmtKRW(dayChange?.amount || 0)} · {fmtPct(dayChange?.pct ?? null)}</span>
+          </div>
+          <div className={`balance-change ${changeClass(monthChange?.amount || 0)}`}>
+            <span className="label">전달 대비</span>
+            <span className="value">{changeArrow(monthChange?.amount || 0)} {fmtKRW(monthChange?.amount || 0)} · {fmtPct(monthChange?.pct ?? null)}</span>
+          </div>
         </div>
-      </div>
-      <div className="chips">
-        {topTags.map((tag) => (
-          <span key={tag.name} className="chip">{tag.name} {tag.pct}%</span>
-        ))}
       </div>
     </section>
   );

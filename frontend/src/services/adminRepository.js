@@ -1,7 +1,19 @@
-import { certifications as seedCertifications, records as seedRecords } from '../data/mockData.js';
+import { certifications as seedCertifications, records as seedRecords, social as seedSocial } from '../data/mockData.js';
 
 const API_BASE_URL = import.meta.env.VITE_DASHBOARD_API_BASE_URL || '/api';
 const USE_MOCK = import.meta.env.VITE_DASHBOARD_USE_MOCK !== 'false';
+
+function normalizeType(type) {
+  const normalized = String(type || '').toLowerCase();
+  return normalized === 'income' ? 'income' : 'expense';
+}
+
+function normalizeOptionalType(type) {
+  const normalized = String(type || '').toLowerCase();
+  if (normalized === 'income') return 'income';
+  if (normalized === 'expense') return 'expense';
+  return '';
+}
 
 function buildHeaders(password) {
   const headers = { 'Content-Type': 'application/json' };
@@ -9,16 +21,38 @@ function buildHeaders(password) {
   return headers;
 }
 
+function parseArrayLike(value) {
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
+function isHttpsUrl(value) {
+  try {
+    const parsed = new URL(String(value || ''));
+    return parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
 function mapRecordFromApi(raw) {
   return {
     id: raw.id,
-    type: raw.type,
+    type: normalizeType(raw.type),
     transaction_date: raw.transaction_date,
-    amount: raw.amount,
+    amount: Number(raw.amount ?? 0),
     memo: raw.memo || '',
     photo_url: raw.photo_url || '',
-    tags: (raw.tags || []).map((tag) => ({ name: tag.name, amount: Number(tag.amount) })),
-    effective_segments: (raw.effective_segments || []).map((seg) => ({
+    tags: parseArrayLike(raw.tags).map((tag) => ({ name: tag.name, amount: Number(tag.amount) })),
+    effective_segments: parseArrayLike(raw.effective_segments).map((seg) => ({
       from: seg.from || seg.effective_from,
       to: seg.to || seg.effective_to,
       amount: Number(seg.amount ?? seg.segment_amount),
@@ -45,6 +79,22 @@ function mapRecordToApi(input) {
   };
 }
 
+function normalizeSocial(raw) {
+  const social = raw || {};
+  const youtube = String(social.youtube_embed_url || social.youtubeEmbedUrl || '').trim();
+  const instagramPost = String(social.instagram_post_url || social.instagramPostUrl || '').trim();
+  const instagramProfile = String(social.instagram_profile_url || social.instagramProfileUrl || '').trim();
+  return {
+    youtube_embed_url: youtube,
+    instagram_post_url: instagramPost,
+    instagram_profile_url: instagramProfile,
+    extra_links: parseArrayLike(social.extra_links ?? social.extraLinks).map((link) => ({
+      label: String(link?.label || '').trim().slice(0, 30),
+      href: String(link?.href || '').trim().slice(0, 500),
+    })).filter((link) => link.label && link.href && isHttpsUrl(link.href)).slice(0, 6),
+  };
+}
+
 export function createHttpAdminRepository({ baseUrl = API_BASE_URL, fetcher = fetch } = {}) {
   return {
     async getRecords() {
@@ -58,8 +108,14 @@ export function createHttpAdminRepository({ baseUrl = API_BASE_URL, fetcher = fe
       const hasFile = photoFile instanceof File;
       const requestInit = hasFile
         ? (() => {
+            const mapped = mapRecordToApi(record);
             const form = new FormData();
-            form.append('payload', JSON.stringify(mapRecordToApi(record)));
+            form.append('type', mapped.type);
+            form.append('transaction_date', mapped.transaction_date);
+            form.append('amount', String(mapped.amount));
+            form.append('memo', mapped.memo || '');
+            form.append('tags', JSON.stringify(mapped.tags || []));
+            form.append('effective_segments', JSON.stringify(mapped.effective_segments || []));
             form.append('photo', photoFile);
             const headers = {};
             if (password) headers['X-Admin-Password'] = password;
@@ -91,7 +147,12 @@ export function createHttpAdminRepository({ baseUrl = API_BASE_URL, fetcher = fe
     async getTags() {
       const res = await fetcher(`${baseUrl}/budget/tags`);
       if (!res.ok) throw new Error(`tags fetch failed: ${res.status}`);
-      return res.json();
+      const json = await res.json();
+      return (json || []).map((tag) => ({
+        name: String(tag?.name || ''),
+        amount: Number(tag?.amount ?? 0),
+        type: normalizeOptionalType(tag?.type || tag?.record_type || tag?.recordType),
+      }));
     },
 
     async createCertification(payload, password) {
@@ -134,12 +195,30 @@ export function createHttpAdminRepository({ baseUrl = API_BASE_URL, fetcher = fe
       });
       if (!res.ok) throw new Error(`certification delete failed: ${res.status}`);
     },
+
+    async getSocialLinks() {
+      const res = await fetcher(`${baseUrl}/social`);
+      if (!res.ok) throw new Error(`social fetch failed: ${res.status}`);
+      const json = await res.json();
+      return normalizeSocial(json);
+    },
+
+    async updateSocialLinks(payload, password) {
+      const res = await fetcher(`${baseUrl}/social`, {
+        method: 'PUT',
+        headers: buildHeaders(password),
+        body: JSON.stringify(normalizeSocial(payload)),
+      });
+      if (!res.ok) throw new Error(`social update failed: ${res.status}`);
+      return res.json().catch(() => ({}));
+    },
   };
 }
 
 export function createMockAdminRepository() {
   let records = seedRecords.map((r) => ({ ...r, tags: [...r.tags], effective_segments: [...r.effective_segments] }));
   let certifications = seedCertifications.map((c) => ({ ...c }));
+  let socialLinks = normalizeSocial(seedSocial);
 
   return {
     async getRecords() {
@@ -177,6 +256,15 @@ export function createMockAdminRepository() {
 
     async deleteCertificationByDate(date) {
       certifications = certifications.filter((c) => c.date !== date);
+    },
+
+    async getSocialLinks() {
+      return { ...socialLinks, extra_links: [...socialLinks.extra_links] };
+    },
+
+    async updateSocialLinks(payload) {
+      socialLinks = normalizeSocial(payload);
+      return { ok: true };
     },
   };
 }

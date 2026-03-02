@@ -1,11 +1,13 @@
-import { fmtDateKR } from '../../utils/format.js';
+import { fmtDateKR, fmtDateKRFull } from '../../utils/format.js';
 
 export default function LatestProofCard({ latestProof, onGoProof }) {
   return (
     <section className="card action-card">
       <div className="card-header">
         <h2>잔액 인증</h2>
-        <span className="muted">최신 1건</span>
+        <span className="tiny muted">
+          최신 업데이트: {latestProof ? fmtDateKRFull(latestProof.date) : '없음'}
+        </span>
       </div>
       {latestProof ? (
         <div className="thumb">

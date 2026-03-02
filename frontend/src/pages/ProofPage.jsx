@@ -3,11 +3,14 @@ import { fmtDateKR } from '../utils/format.js';
 
 export default function ProofPage({ certifications }) {
   const sorted = useMemo(
-    () => [...certifications].sort((a, b) => (a.date < b.date ? 1 : -1)),
+    () =>
+      [...(certifications || [])]
+        .filter((item) => item && item.date)
+        .sort((a, b) => (a.date < b.date ? 1 : -1)),
     [certifications]
   );
   const loopEnabled = sorted.length > 1;
-  const slides = loopEnabled ? [sorted[sorted.length - 1], ...sorted, sorted[0]] : sorted;
+  const slides = loopEnabled ? [sorted[sorted.length - 1], ...sorted, sorted[0]].filter(Boolean) : sorted;
   const [index, setIndex] = useState(loopEnabled ? 1 : 0);
   const [animate, setAnimate] = useState(true);
 
@@ -16,18 +19,37 @@ export default function ProofPage({ certifications }) {
     setAnimate(true);
   }, [loopEnabled, sorted.length]);
 
-  const activeIndex = loopEnabled ? ((index - 1 + sorted.length) % sorted.length) : index;
+  const activeIndex = sorted.length
+    ? (loopEnabled ? ((index - 1 + sorted.length) % sorted.length) : ((index % sorted.length) + sorted.length) % sorted.length)
+    : 0;
+  const currentItem = sorted[activeIndex] || sorted[0] || null;
 
   const handlePrev = () => {
     if (!sorted.length) return;
-    setAnimate(true);
-    setIndex((prev) => prev - 1);
+    if (loopEnabled) {
+      setAnimate(true);
+      setIndex((prev) => {
+        const next = prev - 1;
+        if (next < 0) return sorted.length;
+        return next;
+      });
+      return;
+    }
+    setIndex((prev) => ((prev - 1) % sorted.length + sorted.length) % sorted.length);
   };
 
   const handleNext = () => {
     if (!sorted.length) return;
-    setAnimate(true);
-    setIndex((prev) => prev + 1);
+    if (loopEnabled) {
+      setAnimate(true);
+      setIndex((prev) => {
+        const next = prev + 1;
+        if (next > sorted.length + 1) return 1;
+        return next;
+      });
+      return;
+    }
+    setIndex((prev) => (prev + 1) % sorted.length);
   };
 
   const handleTransitionEnd = () => {
@@ -55,7 +77,7 @@ export default function ProofPage({ certifications }) {
         <section className="card proof-carousel-card">
           <div className="card-header">
             <h2>인증</h2>
-            {sorted.length > 0 && <span className="muted">{fmtDateKR(sorted[activeIndex].date)}</span>}
+            {currentItem && <span className="muted">{fmtDateKR(currentItem.date)}</span>}
           </div>
 
           {sorted.length === 0 ? (

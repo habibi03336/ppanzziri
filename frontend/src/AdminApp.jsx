@@ -13,9 +13,16 @@ function emptyRecordForm() {
     amount: '',
     memo: '',
     photo_url: '',
-    effective_segments: [{ from: today, to: today, amount: '' }],
+    effective_segments: [{ from: today, to: today, amount: '', percent: '' }],
     tags: [],
   };
+}
+
+function calcAmountFromPercent(total, percent) {
+  const totalNum = Number(total || 0);
+  const percentNum = Number(percent || 0);
+  if (!totalNum || !percentNum) return '';
+  return String(Math.round((totalNum * percentNum) / 100));
 }
 
 function buildTagPayload(tagsInput, totalAmount) {
@@ -37,6 +44,59 @@ function buildTagPayload(tagsInput, totalAmount) {
   });
 }
 
+function isHttpsUrl(value) {
+  try {
+    const parsed = new URL(String(value || ''));
+    return parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+function isYoutubeEmbedUrl(value) {
+  if (!isHttpsUrl(value)) return false;
+  try {
+    const parsed = new URL(value);
+    const host = parsed.hostname.toLowerCase();
+    return host === 'www.youtube.com' && parsed.pathname.startsWith('/embed/');
+  } catch {
+    return false;
+  }
+}
+
+function isInstagramPostUrl(value) {
+  if (!isHttpsUrl(value)) return false;
+  try {
+    const parsed = new URL(value);
+    const host = parsed.hostname.toLowerCase();
+    return host === 'www.instagram.com' && /^\/p\/[^/]+\/?$/.test(parsed.pathname);
+  } catch {
+    return false;
+  }
+}
+
+function isInstagramProfileUrl(value) {
+  if (!isHttpsUrl(value)) return false;
+  try {
+    const parsed = new URL(value);
+    const host = parsed.hostname.toLowerCase();
+    return host === 'www.instagram.com' && /^\/[^/]+\/?$/.test(parsed.pathname);
+  } catch {
+    return false;
+  }
+}
+
+function sanitizeExtraLinks(input) {
+  if (!Array.isArray(input)) return [];
+  return input
+    .slice(0, 6)
+    .map((link) => ({
+      label: String(link?.label || '').trim().slice(0, 30),
+      href: String(link?.href || '').trim().slice(0, 500),
+    }))
+    .filter((link) => link.label && link.href && isHttpsUrl(link.href));
+}
+
 export default function AdminApp() {
   const [adminTab, setAdminTab] = useState('record-input');
   const [showSettings, setShowSettings] = useState(false);
@@ -56,6 +116,7 @@ export default function AdminApp() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [recordSubmitError, setRecordSubmitError] = useState('');
 
   const [recordForm, setRecordForm] = useState(emptyRecordForm);
   const [useCustomEffectiveSegments, setUseCustomEffectiveSegments] = useState(false);
@@ -65,16 +126,47 @@ export default function AdminApp() {
   const [certPhotoFile, setCertPhotoFile] = useState(null);
   const [certDeleteDate, setCertDeleteDate] = useState(new Date().toISOString().slice(0, 10));
   const [deleteDate, setDeleteDate] = useState(new Date().toISOString().slice(0, 10));
+  const [socialForm, setSocialForm] = useState({
+    youtube_embed_url: '',
+    instagram_post_url: '',
+    instagram_profile_url: 'https://www.instagram.com/ppanzziri/',
+    extra_links: [],
+  });
 
   const totalAmount = Number(recordForm.amount || 0);
   const segSum = useMemo(() => {
     if (!useCustomEffectiveSegments) return totalAmount;
     return recordForm.effective_segments.reduce((sum, seg) => sum + Number(seg.amount || 0), 0);
   }, [recordForm.effective_segments, totalAmount, useCustomEffectiveSegments]);
-  const knownTagNames = useMemo(
-    () => [...new Set((tags || []).map((tag) => tag.name).filter(Boolean))],
-    [tags]
-  );
+  const knownTagsByType = useMemo(() => {
+    const byType = {
+      expense: new Set(),
+      income: new Set(),
+    };
+
+    (records || []).forEach((record) => {
+      const type = String(record?.type || '').toLowerCase() === 'income' ? 'income' : 'expense';
+      (record?.tags || []).forEach((tag) => {
+        const name = String(tag?.name || '').trim();
+        if (name) byType[type].add(name);
+      });
+    });
+
+    (tags || []).forEach((tag) => {
+      const name = String(tag?.name || '').trim();
+      if (!name) return;
+      const rawType = String(tag?.type || tag?.record_type || '').toLowerCase();
+      if (rawType === 'income' || rawType === 'expense') {
+        byType[rawType].add(name);
+      }
+    });
+
+    return {
+      expense: [...byType.expense].sort((a, b) => a.localeCompare(b, 'ko')),
+      income: [...byType.income].sort((a, b) => a.localeCompare(b, 'ko')),
+    };
+  }, [records, tags]);
+  const knownTagNames = useMemo(() => knownTagsByType[recordForm.type] || [], [knownTagsByType, recordForm.type]);
   const recordsForDeleteDate = useMemo(
     () =>
       records
@@ -93,14 +185,22 @@ export default function AdminApp() {
     setLoading(true);
     setError('');
     try {
-      const [nextRecords, nextTags, nextCertifications] = await Promise.all([
+      const [nextRecords, nextTags, nextCertifications, nextSocial] = await Promise.all([
         adminRepository.getRecords(),
         adminRepository.getTags(),
         adminRepository.getCertifications(),
+        adminRepository.getSocialLinks(),
       ]);
       setRecords(nextRecords);
       setTags(nextTags || []);
       setCertifications(nextCertifications || []);
+      setSocialForm((prev) => ({
+        ...prev,
+        youtube_embed_url: String(nextSocial?.youtube_embed_url || ''),
+        instagram_post_url: String(nextSocial?.instagram_post_url || ''),
+        instagram_profile_url: String(nextSocial?.instagram_profile_url || prev.instagram_profile_url || ''),
+        extra_links: sanitizeExtraLinks(nextSocial?.extra_links),
+      }));
     } catch (err) {
       setError(err instanceof Error ? err.message : '조회 중 오류가 발생했습니다.');
     } finally {
@@ -147,22 +247,47 @@ export default function AdminApp() {
     });
   };
 
+  const updateSegmentPercent = (idx, percentValue) => {
+    setRecordForm((prev) => {
+      const next = [...prev.effective_segments];
+      next[idx] = {
+        ...next[idx],
+        percent: percentValue,
+        amount: calcAmountFromPercent(prev.amount, percentValue),
+      };
+      return { ...prev, effective_segments: next };
+    });
+  };
+
+  useEffect(() => {
+    if (!useCustomEffectiveSegments) return;
+    setRecordForm((prev) => {
+      let changed = false;
+      const nextSegments = prev.effective_segments.map((seg) => {
+        if (!seg.percent) return seg;
+        const nextAmount = calcAmountFromPercent(prev.amount, seg.percent);
+        if (String(seg.amount ?? '') === String(nextAmount)) return seg;
+        changed = true;
+        return { ...seg, amount: nextAmount };
+      });
+      if (!changed) return prev;
+      return { ...prev, effective_segments: nextSegments };
+    });
+  }, [recordForm.amount, useCustomEffectiveSegments]);
+
   const toggleTag = (name) => {
     if (!name) return;
     setRecordForm((prev) => {
-      const exists = prev.tags.some((tag) => tag.name === name);
-      if (exists) return { ...prev, tags: prev.tags.filter((tag) => tag.name !== name) };
-      return { ...prev, tags: [...prev.tags, { name }] };
+      const selectedName = prev.tags[0]?.name || '';
+      if (selectedName === name) return { ...prev, tags: [] };
+      return { ...prev, tags: [{ name }] };
     });
   };
 
   const addCustomTag = () => {
     const nextName = String(newTagName || '').trim();
     if (!nextName) return;
-    setRecordForm((prev) => {
-      if (prev.tags.some((tag) => tag.name === nextName)) return prev;
-      return { ...prev, tags: [...prev.tags, { name: nextName }] };
-    });
+    setRecordForm((prev) => ({ ...prev, tags: [{ name: nextName }] }));
     setNewTagName('');
   };
 
@@ -170,17 +295,18 @@ export default function AdminApp() {
     e.preventDefault();
     setNotice('');
     setError('');
+    setRecordSubmitError('');
 
     if (!recordForm.transaction_date || !recordForm.amount) {
-      setError('거래일과 총 금액은 필수입니다.');
+      setRecordSubmitError('거래일과 총 금액은 필수입니다.');
       return;
     }
     if (useCustomEffectiveSegments && segSum !== totalAmount) {
-      setError('유효 구간 금액 합이 총 금액과 일치해야 합니다.');
+      setRecordSubmitError('유효 구간 금액 합이 총 금액과 일치해야 합니다.');
       return;
     }
     if (useCustomEffectiveSegments && recordForm.effective_segments.length === 0) {
-      setError('유효 구간을 최소 1개 이상 입력하세요.');
+      setRecordSubmitError('유효 구간을 최소 1개 이상 입력하세요.');
       return;
     }
 
@@ -205,14 +331,22 @@ export default function AdminApp() {
         password,
         recordPhotoFile
       );
-      setRecordForm(emptyRecordForm());
+      setRecordForm((prev) => ({
+        ...emptyRecordForm(),
+        type: prev.type,
+        transaction_date: prev.transaction_date,
+        effective_segments: [{ from: prev.transaction_date, to: prev.transaction_date, amount: '', percent: '' }],
+      }));
       setUseCustomEffectiveSegments(false);
       setNewTagName('');
       setRecordPhotoFile(null);
       setNotice('기록이 저장되었습니다.');
+      if (typeof window !== 'undefined') {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
       await loadAll();
     } catch (err) {
-      setError(err instanceof Error ? err.message : '저장 실패');
+      setRecordSubmitError(err instanceof Error ? err.message : '저장 실패');
     }
   };
 
@@ -257,6 +391,45 @@ export default function AdminApp() {
       await loadAll();
     } catch (err) {
       setError(err instanceof Error ? err.message : '삭제 실패');
+    }
+  };
+
+  const submitSocialLinks = async (e) => {
+    e.preventDefault();
+    setNotice('');
+    setError('');
+    const youtube = String(socialForm.youtube_embed_url || '').trim();
+    const instagramPost = String(socialForm.instagram_post_url || '').trim();
+    const instagramProfile = String(socialForm.instagram_profile_url || '').trim();
+    const extraLinks = sanitizeExtraLinks(socialForm.extra_links);
+
+    if (youtube && !isYoutubeEmbedUrl(youtube)) {
+      setError('유튜브는 https://www.youtube.com/embed/... 형식만 허용됩니다.');
+      return;
+    }
+    if (instagramPost && !isInstagramPostUrl(instagramPost)) {
+      setError('인스타 게시물은 https://www.instagram.com/p/... 형식만 허용됩니다.');
+      return;
+    }
+    if (instagramProfile && !isInstagramProfileUrl(instagramProfile)) {
+      setError('인스타 프로필은 https://www.instagram.com/... 형식만 허용됩니다.');
+      return;
+    }
+
+    try {
+      await adminRepository.updateSocialLinks(
+        {
+          youtube_embed_url: youtube,
+          instagram_post_url: instagramPost,
+          instagram_profile_url: instagramProfile,
+          extra_links: extraLinks,
+        },
+        password
+      );
+      setNotice('소셜 링크가 저장되었습니다.');
+      await loadAll();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '소셜 저장 실패');
     }
   };
 
@@ -321,6 +494,13 @@ export default function AdminApp() {
         >
           기록삭제
         </button>
+        <button
+          type="button"
+          className={`admin-tab ${adminTab === 'social-input' ? 'active' : ''}`}
+          onClick={() => setAdminTab('social-input')}
+        >
+          소셜입력
+        </button>
       </nav>
 
       {error && <section className="admin-card admin-error">{error}</section>}
@@ -334,14 +514,22 @@ export default function AdminApp() {
             <div className="admin-row two">
               <label>
                 유형
-                <select
-                  className="admin-input"
-                  value={recordForm.type}
-                  onChange={(e) => setRecordForm((prev) => ({ ...prev, type: e.target.value }))}
-                >
-                  <option value="expense">지출</option>
-                  <option value="income">수입</option>
-                </select>
+                <div className="admin-type-toggle" role="tablist" aria-label="유형 선택">
+                  <button
+                    type="button"
+                    className={`admin-type-btn ${recordForm.type === 'expense' ? 'active' : ''}`}
+                    onClick={() => setRecordForm((prev) => ({ ...prev, type: 'expense', tags: [] }))}
+                  >
+                    지출
+                  </button>
+                  <button
+                    type="button"
+                    className={`admin-type-btn ${recordForm.type === 'income' ? 'active' : ''}`}
+                    onClick={() => setRecordForm((prev) => ({ ...prev, type: 'income', tags: [] }))}
+                  >
+                    수입
+                  </button>
+                </div>
               </label>
               <label>
                 거래일
@@ -400,10 +588,16 @@ export default function AdminApp() {
               {useCustomEffectiveSegments && (
                 <>
                   {recordForm.effective_segments.map((seg, idx) => (
-                    <div className="admin-row three" key={`seg-${idx}`}>
+                    <div className="admin-row four" key={`seg-${idx}`}>
                       <input className="admin-input" type="date" value={seg.from} onChange={(e) => updateSegment(idx, 'from', e.target.value)} />
                       <input className="admin-input" type="date" value={seg.to} onChange={(e) => updateSegment(idx, 'to', e.target.value)} />
                       <input className="admin-input" type="number" min="0" value={seg.amount} onChange={(e) => updateSegment(idx, 'amount', e.target.value)} placeholder="금액" />
+                      <select className="admin-input" value={seg.percent || ''} onChange={(e) => updateSegmentPercent(idx, e.target.value)}>
+                        <option value="">직접입력</option>
+                        {Array.from({ length: 10 }, (_, i) => (i + 1) * 10).map((pct) => (
+                          <option key={pct} value={pct}>{pct}%</option>
+                        ))}
+                      </select>
                       <button type="button" className="admin-btn ghost" onClick={() => setRecordForm((prev) => ({
                         ...prev,
                         effective_segments: prev.effective_segments.filter((_, i) => i !== idx),
@@ -412,7 +606,7 @@ export default function AdminApp() {
                   ))}
                   <button type="button" className="admin-btn ghost" onClick={() => setRecordForm((prev) => ({
                     ...prev,
-                    effective_segments: [...prev.effective_segments, { from: prev.transaction_date, to: prev.transaction_date, amount: '' }],
+                    effective_segments: [...prev.effective_segments, { from: prev.transaction_date, to: prev.transaction_date, amount: '', percent: '' }],
                   }))}>유효 구간 추가</button>
                 </>
               )}
@@ -466,6 +660,7 @@ export default function AdminApp() {
             </section>
 
             <button type="submit" className="admin-btn primary">기록 저장</button>
+            {recordSubmitError && <p className="admin-inline-error">{recordSubmitError}</p>}
           </form>
           </article>
         </section>
@@ -549,20 +744,83 @@ export default function AdminApp() {
         {!loading && records.length === 0 && <p>기록이 없습니다.</p>}
         {!loading && records.length > 0 && recordsForDeleteDate.length === 0 && <p>선택한 날짜의 기록이 없습니다.</p>}
         {!loading && recordsForDeleteDate.length > 0 && (
-          <div className="admin-record-list">
+          <div className="admin-record-list record-delete-list">
             {recordsForDeleteDate.map((record) => (
               <div key={record.id} className="admin-record-item">
                 <div className="admin-record-main">
                   <strong className="admin-record-date">{fmtDateKRFull(record.transaction_date)}</strong>
-                  <div className="admin-record-meta">
-                    {record.type === 'expense' ? '지출' : '수입'} · {fmtKRW(record.amount)} · {record.memo || '메모 없음'}
+                  <div className="admin-record-meta-row">
+                    <div className="admin-record-meta">
+                      {record.type === 'expense' ? '지출' : '수입'} · {fmtKRW(record.amount)} · {record.memo || '메모 없음'}
+                    </div>
+                    {(record.tags || []).length > 0 && (
+                      <div className="admin-record-tags inline">
+                        {(record.tags || []).map((tag, idx) => (
+                          <span key={`${record.id}-tag-${idx}`} className="admin-record-tag">
+                            {tag.name}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
+                  {record.photo_url && (
+                    <a
+                      className="admin-record-thumb-link"
+                      href={record.photo_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      aria-label="첨부 사진 보기"
+                    >
+                      <img className="admin-record-thumb" src={record.photo_url} alt="기록 첨부 사진" />
+                    </a>
+                  )}
                 </div>
-                <button type="button" className="admin-btn danger" onClick={() => removeRecord(record.id)}>삭제</button>
+                <button type="button" className="admin-btn danger admin-record-delete-btn" onClick={() => removeRecord(record.id)}>삭제</button>
               </div>
             ))}
           </div>
         )}
+        </section>
+      )}
+
+      {adminTab === 'social-input' && (
+        <section className="admin-grid admin-tab-panel">
+          <article className="admin-card">
+            <h2>소셜 링크 입력</h2>
+            <form className="admin-form" onSubmit={submitSocialLinks}>
+              <label>
+                유튜브 임베드 URL
+                <input
+                  className="admin-input"
+                  type="text"
+                  value={socialForm.youtube_embed_url}
+                  onChange={(e) => setSocialForm((prev) => ({ ...prev, youtube_embed_url: e.target.value }))}
+                  placeholder="https://www.youtube.com/embed/..."
+                />
+              </label>
+              <label>
+                인스타 게시물 URL
+                <input
+                  className="admin-input"
+                  type="text"
+                  value={socialForm.instagram_post_url}
+                  onChange={(e) => setSocialForm((prev) => ({ ...prev, instagram_post_url: e.target.value }))}
+                  placeholder="https://www.instagram.com/p/..."
+                />
+              </label>
+              <label>
+                인스타 프로필 URL
+                <input
+                  className="admin-input"
+                  type="text"
+                  value={socialForm.instagram_profile_url}
+                  onChange={(e) => setSocialForm((prev) => ({ ...prev, instagram_profile_url: e.target.value }))}
+                  placeholder="https://www.instagram.com/ppanzziri/"
+                />
+              </label>
+              <button type="submit" className="admin-btn primary">소셜 저장</button>
+            </form>
+          </article>
         </section>
       )}
     </main>

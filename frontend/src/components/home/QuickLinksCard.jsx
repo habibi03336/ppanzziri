@@ -1,48 +1,112 @@
-export default function QuickLinksCard() {
-  const links = [
-    {
-      key: 'youtube',
-      label: '@ppanzziri',
-      href: 'https://www.youtube.com/@ppanzziri',
-      icon: (
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <rect x="1.5" y="4.5" width="21" height="15" rx="5" fill="#ff0000" />
-          <polygon points="10,9 16,12 10,15" fill="#ffffff" />
-        </svg>
-      ),
-    },
-    {
-      key: 'instagram',
-      label: '@ppanzziri',
-      href: 'https://www.instagram.com/ppanzziri/',
-      icon: (
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <defs>
-            <linearGradient id="igGradHome" x1="0%" y1="100%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#F58529" />
-              <stop offset="35%" stopColor="#DD2A7B" />
-              <stop offset="70%" stopColor="#8134AF" />
-              <stop offset="100%" stopColor="#515BD4" />
-            </linearGradient>
-          </defs>
-          <rect x="2" y="2" width="20" height="20" rx="6" fill="url(#igGradHome)" />
-          <circle cx="12" cy="12" r="4.2" fill="none" stroke="#FFFFFF" strokeWidth="1.8" />
-          <circle cx="17.2" cy="6.8" r="1.25" fill="#FFFFFF" />
-        </svg>
-      ),
-    },
-  ];
+const DEFAULT_INSTAGRAM_PROFILE_URL = 'https://www.instagram.com/ppanzziri/';
+const DEFAULT_YOUTUBE_CHANNEL_URL = 'https://www.youtube.com/@ppanzziri';
+
+function getInstagramEmbedSrc(postUrl) {
+  const url = String(postUrl || '').trim();
+  if (!url || !url.includes('/p/')) return '';
+  try {
+    const parsed = new URL(url);
+    const cleanPath = parsed.pathname.replace(/\/+$/, '');
+    if (cleanPath.endsWith('/embed')) return `${parsed.origin}${cleanPath}`;
+    return `${parsed.origin}${cleanPath}/embed`;
+  } catch {
+    return '';
+  }
+}
+
+function normalizeExtraLinks(value) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => ({
+      label: String(item?.label || '').trim(),
+      href: String(item?.href || '').trim(),
+    }))
+    .filter((item) => item.label && item.href);
+}
+
+export default function QuickLinksCard({ social }) {
+  const youtubeEmbedUrl = String(social?.youtube_embed_url || social?.youtubeEmbedUrl || '').trim();
+  const instagramPostUrl = String(social?.instagram_post_url || social?.instagramPostUrl || '').trim();
+  const instagramProfileUrl = DEFAULT_INSTAGRAM_PROFILE_URL;
+  const instagramEmbedSrc = getInstagramEmbedSrc(instagramPostUrl);
+  const extraLinks = normalizeExtraLinks(social?.extra_links ?? social?.extraLinks);
 
   return (
-    <section className="card">
-      <div className="quick-links">
-        {links.map((link) => (
-          <a key={link.key} className="quick-link" href={link.href} target="_blank" rel="noreferrer noopener">
-            <span className="quick-link-icon">{link.icon}</span>
-            <span className="quick-link-label">{link.label}</span>
+    <section className="card social-row-card">
+      <div className="social-row">
+        <div className="embed-wrap video social-youtube">
+          <a
+            className="social-logo-link youtube"
+            href={DEFAULT_YOUTUBE_CHANNEL_URL}
+            target="_blank"
+            rel="noreferrer noopener"
+            aria-label="유튜브 채널 바로가기"
+          >
+            <svg className="social-logo-mark youtube" viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="2" y="5" width="20" height="14" rx="4.2" fill="#FF0000" />
+              <path d="M10 9L16 12L10 15V9Z" fill="#FFFFFF" />
+            </svg>
           </a>
-        ))}
+          {youtubeEmbedUrl ? (
+            <iframe
+              title="유튜브 최신 영상"
+              src={youtubeEmbedUrl}
+              loading="lazy"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowFullScreen
+              referrerPolicy="strict-origin-when-cross-origin"
+            />
+          ) : (
+            <div className="instagram-fallback">유튜브 링크 없음</div>
+          )}
+        </div>
+
+        {instagramEmbedSrc ? (
+          <div className="embed-wrap post social-instagram">
+            <a
+              className="social-logo-link instagram"
+              href={instagramProfileUrl}
+              target="_blank"
+              rel="noreferrer noopener"
+              aria-label="인스타그램 프로필 바로가기"
+            >
+              <svg className="social-logo-mark instagram" viewBox="0 0 24 24" aria-hidden="true">
+                <defs>
+                  <linearGradient id="igLogoGradient" x1="0%" y1="100%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="#f58529" />
+                    <stop offset="35%" stopColor="#dd2a7b" />
+                    <stop offset="70%" stopColor="#8134af" />
+                    <stop offset="100%" stopColor="#515bd4" />
+                  </linearGradient>
+                </defs>
+                <rect x="2" y="2" width="20" height="20" rx="6" fill="url(#igLogoGradient)" />
+                <circle cx="12" cy="12" r="4.3" fill="none" stroke="#FFFFFF" strokeWidth="1.8" />
+                <circle cx="17.3" cy="6.8" r="1.2" fill="#FFFFFF" />
+              </svg>
+            </a>
+            <iframe
+              title="인스타 최신 게시물"
+              src={instagramEmbedSrc}
+              loading="lazy"
+              referrerPolicy="strict-origin-when-cross-origin"
+            />
+          </div>
+        ) : (
+          <a className="instagram-fallback social-instagram" href={instagramProfileUrl} target="_blank" rel="noreferrer noopener">
+            최신 게시물 보기
+          </a>
+        )}
       </div>
+
+      {extraLinks.length > 0 && (
+        <div className="extra-links">
+          {extraLinks.map((link) => (
+            <a key={`${link.label}-${link.href}`} className="extra-link" href={link.href} target="_blank" rel="noreferrer noopener">
+              {link.label}
+            </a>
+          ))}
+        </div>
+      )}
     </section>
   );
 }

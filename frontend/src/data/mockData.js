@@ -45,6 +45,7 @@ export const records = [
     transaction_date: '2026-02-06',
     amount: 24000,
     memo: '태국 음식',
+    photo_url: 'https://picsum.photos/id/1080/400/250',
     tags: [
       { name: '생활', amount: 10000 },
       { name: '경험', amount: 14000 },
@@ -57,6 +58,7 @@ export const records = [
     transaction_date: '2026-02-10',
     amount: 89000,
     memo: '교통 + 이동',
+    photo_url: 'https://picsum.photos/id/1011/400/250',
     tags: [{ name: '이동', amount: 89000 }],
     effective_segments: [{ from: '2026-02-10', to: '2026-02-10', amount: 89000 }],
   },
@@ -75,6 +77,7 @@ export const records = [
     transaction_date: '2026-02-16',
     amount: 32000,
     memo: '카페',
+    photo_url: 'https://picsum.photos/id/1060/400/250',
     tags: [{ name: '생활', amount: 32000 }],
     effective_segments: [{ from: '2026-02-16', to: '2026-02-16', amount: 32000 }],
   },
@@ -84,8 +87,29 @@ export const records = [
     transaction_date: '2026-02-17',
     amount: 61000,
     memo: '장보기',
+    photo_url: 'https://picsum.photos/id/292/400/250',
     tags: [{ name: '생활', amount: 61000 }],
     effective_segments: [{ from: '2026-02-17', to: '2026-02-17', amount: 61000 }],
+  },
+  {
+    id: 9,
+    type: 'expense',
+    transaction_date: '2026-02-17',
+    amount: 18000,
+    memo: '편의점 간식',
+    photo_url: 'https://picsum.photos/id/102/400/250',
+    tags: [{ name: '생활', amount: 18000 }],
+    effective_segments: [{ from: '2026-02-17', to: '2026-02-17', amount: 18000 }],
+  },
+  {
+    id: 10,
+    type: 'income',
+    transaction_date: '2026-02-17',
+    amount: 50000,
+    memo: '중고거래 판매',
+    photo_url: 'https://picsum.photos/id/1043/400/250',
+    tags: [{ name: '중고판매', amount: 50000 }],
+    effective_segments: [{ from: '2026-02-17', to: '2026-02-17', amount: 50000 }],
   },
 ];
 
@@ -93,3 +117,10 @@ export const certifications = [
   { date: '2026-02-17', balance: 0, photo_url: '/assets/proof-2026-02-17.svg' },
   { date: '2026-02-12', balance: 0, photo_url: '/assets/proof-2026-02-12.svg' },
 ];
+
+export const social = {
+  youtube_embed_url: 'https://www.youtube.com/embed/FelkBPk8wWE?list=PLQL7kfEcNRg0esZ-bj8KiZdW7XedKjFCI',
+  instagram_post_url: 'https://www.instagram.com/p/DVANzCZkyjX/?utm_source=ig_web_copy_link&igsh=MzRlODBiNWFlZA==',
+  instagram_profile_url: 'https://www.instagram.com/ppanzziri/',
+  extra_links: [],
+};

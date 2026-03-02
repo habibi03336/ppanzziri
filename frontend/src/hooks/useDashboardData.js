@@ -9,7 +9,9 @@ import {
   tagTotalsEffectiveLast30,
 } from '../utils/calculations.js';
 
-export default function useDashboardData(records, certifications, startCapital) {
+const CHALLENGE_START_DATE = '2026-02-08';
+
+export default function useDashboardData(records, certifications, startCapital, social) {
   return useMemo(() => {
     const recordsAsc = sortByDateAsc(records, 'transaction_date');
     const totalIncome = recordsAsc.filter((r) => r.type === 'income').reduce((s, r) => s + r.amount, 0);
@@ -23,11 +25,31 @@ export default function useDashboardData(records, certifications, startCapital) 
       balanceSeries.push({ date: r.transaction_date, balance: bal });
     }
 
-    const asOfDate = balanceSeries.length
-      ? balanceSeries[balanceSeries.length - 1].date
-      : toISODate(new Date());
+    const asOfDate = toISODate(new Date());
     const asOfObj = parseDate(asOfDate);
+    const yesterday = toISODate(addDays(asOfObj, -1));
+    const monthAgo = toISODate(addDays(asOfObj, -30));
     const start30 = toISODate(addDays(asOfObj, -29));
+    const start90 = toISODate(addDays(asOfObj, -89));
+    const effectiveStart90 = parseDate(start90) > parseDate(CHALLENGE_START_DATE)
+      ? start90
+      : CHALLENGE_START_DATE;
+
+    const balanceAt = (targetDate) => {
+      let value = startCapital;
+      for (const r of recordsAsc) {
+        if (r.transaction_date > targetDate) break;
+        value += r.type === 'income' ? r.amount : -r.amount;
+      }
+      return value;
+    };
+
+    const prevDayBalance = balanceAt(yesterday);
+    const prevMonthBalance = balanceAt(monthAgo);
+    const dayDelta = currentBalance - prevDayBalance;
+    const monthDelta = currentBalance - prevMonthBalance;
+    const dayDeltaPct = prevDayBalance !== 0 ? (dayDelta / prevDayBalance) * 100 : null;
+    const monthDeltaPct = prevMonthBalance !== 0 ? (monthDelta / prevMonthBalance) * 100 : null;
 
     const dailyExpenseEff = buildDailyEffectiveMap(records, 'expense');
 
@@ -38,7 +60,8 @@ export default function useDashboardData(records, certifications, startCapital) 
 
     const avgAll = averageDailyFromMap(dailyExpenseEff, earliestEffDate, asOfDate);
     const avg30 = averageDailyFromMap(dailyExpenseEff, start30, asOfDate);
-    const runwayDays = avg30 > 0 ? Math.floor(currentBalance / avg30) : null;
+    const avg90 = averageDailyFromMap(dailyExpenseEff, effectiveStart90, asOfDate);
+    const runwayDays = avg90 > 0 ? Math.floor(currentBalance / avg90) : null;
 
     const tagTotals = tagTotalsEffectiveLast30(records, start30, asOfDate);
     const tagItems = [...tagTotals.entries()]
@@ -63,9 +86,12 @@ export default function useDashboardData(records, certifications, startCapital) 
       totalIncome,
       totalExpense,
       currentBalance,
+      dayChange: { amount: dayDelta, pct: dayDeltaPct },
+      monthChange: { amount: monthDelta, pct: monthDeltaPct },
       balanceSeries,
       avgAll,
       avg30,
+      avg90,
       runwayDays,
       tagItems,
       topTags,
@@ -74,6 +100,12 @@ export default function useDashboardData(records, certifications, startCapital) 
       latestProof,
       certifications,
       start30,
+      social: social || {
+        youtube_embed_url: '',
+        instagram_post_url: '',
+        instagram_profile_url: '',
+        extra_links: [],
+      },
     };
-  }, [records, certifications, startCapital]);
+  }, [records, certifications, startCapital, social]);
 }

@@ -67,10 +67,17 @@
   color: #0a6d24;
 }
 
+.admin-inline-error {
+  margin: 4px 0 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: #b1002b;
+}
+
 .admin-tabs {
   margin-top: 12px;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
 }
 
@@ -125,6 +132,10 @@
   grid-template-columns: 1fr 1fr 1fr auto;
 }
 
+.admin-row.four {
+  grid-template-columns: 1fr 1fr 1fr 120px auto;
+}
+
 .admin-row.tag {
   grid-template-columns: 1fr auto;
 }
@@ -144,6 +155,7 @@
   gap: 6px;
   font-weight: 600;
   font-size: 13px;
+  min-width: 0;
 }
 
 .admin-input {
@@ -153,6 +165,34 @@
   background: #fff;
   padding: 10px 12px;
   font-size: 14px;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.admin-input[type='date'] {
+  max-width: 100%;
+}
+
+.admin-type-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.admin-type-btn {
+  border: 1px solid #d8d8d8;
+  border-radius: 10px;
+  background: #fff;
+  height: 40px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-type-btn.active {
+  border-color: #c4002f;
+  color: #c4002f;
+  background: #fff4f7;
 }
 
 .admin-subtitle {
@@ -288,18 +328,78 @@
   word-break: break-word;
 }
 
+.admin-record-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.admin-record-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.admin-record-tags.inline {
+  display: inline-flex;
+}
+
+.admin-record-tag {
+  border: 1px solid #ddd;
+  border-radius: 999px;
+  background: #fff;
+  padding: 3px 8px;
+  font-size: 12px;
+  color: #444;
+}
+
+.admin-record-thumb-link {
+  display: inline-block;
+  width: fit-content;
+}
+
+.admin-record-thumb {
+  display: block;
+  width: 92px;
+  height: 58px;
+  border-radius: 8px;
+  border: 1px solid #e5e5e5;
+  object-fit: cover;
+  background: #f0f0f0;
+}
+
+.record-delete-list .admin-record-item {
+  align-items: flex-start;
+}
+
+.record-delete-list .admin-record-main {
+  flex: 1;
+}
+
+.admin-record-delete-btn {
+  margin-left: auto;
+  white-space: nowrap;
+}
+
 @media (max-width: 980px) {
   .admin-grid {
     grid-template-columns: 1fr;
   }
 
   .admin-row.two,
-  .admin-row.three {
+  .admin-row.three,
+  .admin-row.four {
     grid-template-columns: 1fr;
   }
 
   .admin-record-item {
     flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .record-delete-list .admin-record-item {
+    flex-direction: row;
     align-items: flex-start;
   }
 

@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { fmtDateKR, fmtKRW } from '../../utils/format.js';
 
+const Y_AXIS_STEP = 2_500_000;
+const Y_AXIS_UP_PAD = 1_000_000;
+const Y_AXIS_DOWN_PAD = 2_500_000;
+
 export default function SurvivalCurveCard({ balanceSeries, start30, startCapital }) {
   const [range, setRange] = useState('30');
   const canvasRef = useRef(null);
@@ -14,6 +18,12 @@ export default function SurvivalCurveCard({ balanceSeries, start30, startCapital
   const values = useMemo(() => sliced.map((p) => Math.round(p.balance)), [sliced]);
   const min = values.length ? Math.min(...values, startCapital) : startCapital;
   const max = values.length ? Math.max(...values, startCapital) : startCapital;
+  const yBounds = useMemo(() => {
+    const yMin = Math.floor((min - Y_AXIS_DOWN_PAD) / Y_AXIS_STEP) * Y_AXIS_STEP;
+    let yMax = Math.ceil((max + Y_AXIS_UP_PAD) / Y_AXIS_STEP) * Y_AXIS_STEP;
+    if (yMax <= yMin) yMax = yMin + Y_AXIS_STEP;
+    return { yMin, yMax };
+  }, [min, max]);
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -64,10 +74,13 @@ export default function SurvivalCurveCard({ balanceSeries, start30, startCapital
             ticks: { color: '#999', maxTicksLimit: 6, font: { size: 11, weight: '600' } },
           },
           y: {
+            min: yBounds.yMin,
+            max: yBounds.yMax,
             grid: { color: 'rgba(0,0,0,.06)' },
             ticks: {
               color: '#999',
               maxTicksLimit: 5,
+              stepSize: Y_AXIS_STEP,
               font: { size: 11, weight: '600' },
               callback: (v) => `${Math.round(v / 10000)}만`,
             },
@@ -82,7 +95,7 @@ export default function SurvivalCurveCard({ balanceSeries, start30, startCapital
         chartRef.current = null;
       }
     };
-  }, [sliced, startCapital, values]);
+  }, [sliced, startCapital, values, yBounds]);
 
   return (
     <section className="card card-lg">
