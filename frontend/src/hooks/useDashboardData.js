@@ -77,7 +77,25 @@ export default function useDashboardData(records, certifications, startCapital, 
     })();
 
     const recent7 = recordsInLastNDays(records, asOfDate, 7);
-    const groupedRecords = groupByTransactionDate(records);
+    const recordPhotos = [...records]
+      .filter((record) => record.photo_url)
+      .sort((a, b) => {
+        if (a.transaction_date !== b.transaction_date) {
+          return a.transaction_date < b.transaction_date ? 1 : -1;
+        }
+        return Number(b.id || 0) - Number(a.id || 0);
+      })
+      .map((record) => ({
+        id: record.id,
+        transaction_date: record.transaction_date,
+        memo: record.memo || '',
+        tags: (record.tags || []).map((tag) => tag.name).filter(Boolean),
+        photo_url: record.photo_url,
+      }));
+    const groupedRecords = groupByTransactionDate(records).map((group) => ({
+      ...group,
+      balance: balanceAt(group.date),
+    }));
     const latestProof = [...certifications].sort((a, b) => parseDate(b.date) - parseDate(a.date))[0] || null;
 
     return {
@@ -96,6 +114,7 @@ export default function useDashboardData(records, certifications, startCapital, 
       tagItems,
       topTags,
       recent7,
+      recordPhotos,
       groupedRecords,
       latestProof,
       certifications,

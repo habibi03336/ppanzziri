@@ -74,8 +74,9 @@ export default function DailyCostCard({ runwayDays, avg90 }) {
               <strong className="daily-info-head">현재 자금을 하루 평균 사용금액으로 나누어 산출합니다.</strong>
               <br />
               <span>
-                - 하루 평균 사용금액은 최근 90일 기준:
+                - 하루 평균 사용금액은 최근 90일 기준으로
                 <strong className="daily-info-value"> {avg90Label}</strong>
+                입니다.
               </span>
               <br />
               <span>- 결제일이 아닌 효용 발생 시점 기준으로 계산합니다.</span>

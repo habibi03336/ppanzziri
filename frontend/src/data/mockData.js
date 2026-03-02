@@ -111,6 +111,18 @@ export const records = [
     tags: [{ name: '중고판매', amount: 50000 }],
     effective_segments: [{ from: '2026-02-17', to: '2026-02-17', amount: 50000 }],
   },
+  {
+    id: 11,
+    type: 'expense',
+    transaction_date: '2026-02-27',
+    amount: 127000,
+    memo: '프로젝트 마감 직전 장시간 작업으로 인한 야식과 교통비 및 소모품 구매 내역',
+    tags: [
+      { name: '생활비초장문카테고리테스트용태그', amount: 69000 },
+      { name: '업무관련예상치못한지출상세분류', amount: 58000 },
+    ],
+    effective_segments: [{ from: '2026-02-27', to: '2026-02-27', amount: 127000 }],
+  },
 ];
 
 export const certifications = [

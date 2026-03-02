@@ -1,8 +1,23 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { fmtDateKR, fmtKRW } from '../utils/format.js';
+import ImageCarousel from '../components/common/ImageCarousel.jsx';
 
 export default function RecordsPage({ groupedRecords }) {
-  const [modalImage, setModalImage] = useState('');
+  const [modalViewer, setModalViewer] = useState(null);
+
+  const closeViewer = () => {
+    setModalViewer(null);
+  };
+
+  useEffect(() => {
+    const screen = document.getElementById('screen-records');
+    const scroller = screen?.closest('.content');
+    if (scroller) {
+      scroller.scrollTo({ top: 0, behavior: 'auto' });
+      return;
+    }
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  }, []);
 
   return (
     <section className="screen active" id="screen-records">
@@ -22,17 +37,22 @@ export default function RecordsPage({ groupedRecords }) {
               <div className="summary-meta">{group.items.length}건</div>
             </summary>
 
+            <div className="record-balance-row" aria-label="해당 날짜 기준 잔액">
+              <span className="record-balance-label">해당일 기준 잔액</span>
+              <span className="record-balance-value">{fmtKRW(group.balance || 0)}</span>
+            </div>
+
             {group.items.map((item) => (
               <div key={item.id} className="record-row compact">
                 <div className="record-left">
                   <div className={`badge ${item.type}`}>{item.type === 'expense' ? '지출' : '수입'}</div>
                   <div className="record-inline-text">
-                    <span className="record-memo">{item.memo || ''}</span>
                     {(item.tags || []).length > 0 && (
                       <span className="tiny record-tags-inline">
                         {(item.tags || []).map((tag) => tag.name).join(' · ')}
                       </span>
                     )}
+                    <span className="record-memo">{item.memo || ''}</span>
                   </div>
                 </div>
                 <div className="record-right compact">
@@ -43,11 +63,16 @@ export default function RecordsPage({ groupedRecords }) {
                 </div>
               </div>
             ))}
-            {group.items.some((item) => item.photo_url) && (
-              <div className="record-photo-strip" aria-label="해당 날짜 첨부 이미지 목록">
-                {group.items
-                  .filter((item) => item.photo_url)
-                  .map((item) => (
+            {(() => {
+              const photoItems = group.items
+                .filter((item) => item.photo_url)
+                .sort((a, b) => Number(a.id) - Number(b.id));
+
+              if (photoItems.length === 0) return null;
+
+              return (
+                <div className="record-photo-strip" aria-label="해당 날짜 첨부 이미지 목록">
+                  {photoItems.map((item, photoIndex) => (
                     <a
                       key={`photo-${item.id}`}
                       className="record-photo-thumb"
@@ -55,14 +80,19 @@ export default function RecordsPage({ groupedRecords }) {
                       aria-label={`${item.memo || '기록'} 사진 보기`}
                       onClick={(e) => {
                         e.preventDefault();
-                        setModalImage(item.photo_url);
+                        setModalViewer({
+                          date: group.date,
+                          photos: photoItems.map((photo) => photo.photo_url),
+                          index: photoIndex,
+                        });
                       }}
                     >
                       <img src={item.photo_url} alt={`${fmtDateKR(item.transaction_date)} 기록 사진`} />
                     </a>
                   ))}
-              </div>
-            )}
+                </div>
+              );
+            })()}
           </details>
         ))}
         {groupedRecords.length === 0 && (
@@ -71,24 +101,33 @@ export default function RecordsPage({ groupedRecords }) {
           </section>
         )}
 
-        {modalImage && (
+        {modalViewer && (
           <div
             className="record-photo-modal"
             role="dialog"
             aria-modal="true"
             aria-label="기록 사진 크게 보기"
-            onClick={() => setModalImage('')}
+            onClick={closeViewer}
           >
             <div className="record-photo-modal-content" onClick={(e) => e.stopPropagation()}>
               <button
                 type="button"
                 className="record-photo-modal-close"
                 aria-label="닫기"
-                onClick={() => setModalImage('')}
+                onClick={closeViewer}
               >
                 ×
               </button>
-              <img src={modalImage} alt="기록 사진 미리보기" />
+              <ImageCarousel
+                images={modalViewer.photos}
+                initialIndex={modalViewer.index || 0}
+                className="record-modal-carousel"
+                showDots={false}
+                showCount
+                countClassName="record-photo-modal-count"
+                fit="contain"
+                getAlt={() => `${fmtDateKR(modalViewer.date)} 기록 사진 미리보기`}
+              />
             </div>
           </div>
         )}

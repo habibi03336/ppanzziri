@@ -3,7 +3,6 @@ import { useState } from 'react';
 const MENU_ITEMS = [
   { key: 'home', label: '홈' },
   { key: 'records', label: '기록' },
-  { key: 'proof', label: '인증' },
 ];
 
 const AVATAR_SRC = '/assets/ppanzziri-character.png';

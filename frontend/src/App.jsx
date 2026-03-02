@@ -3,7 +3,6 @@ import AppShell from './components/layout/AppShell.jsx';
 import FloatingTabMenu from './components/layout/FloatingTabMenu.jsx';
 import HomePage from './pages/HomePage.jsx';
 import RecordsPage from './pages/RecordsPage.jsx';
-import ProofPage from './pages/ProofPage.jsx';
 import useDashboardData from './hooks/useDashboardData.js';
 import useDashboardQuery from './hooks/useDashboardQuery.js';
 import { dashboardRepository } from './services/dashboardRepository.js';
@@ -20,7 +19,7 @@ const EMPTY_DASHBOARD = {
     extra_links: [],
   },
 };
-const VALID_TABS = new Set(['home', 'records', 'proof']);
+const VALID_TABS = new Set(['home', 'records']);
 
 function normalizeTab(value) {
   const next = String(value || '').toLowerCase();
@@ -98,7 +97,6 @@ export default function App() {
 
       {!loading && !error && tab === 'home' && <HomePage dashboard={dashboard} onNavigate={handleTabChange} />}
       {!loading && !error && tab === 'records' && <RecordsPage groupedRecords={dashboard.groupedRecords} />}
-      {!loading && !error && tab === 'proof' && <ProofPage certifications={dashboard.certifications} />}
     </AppShell>
   );
 }

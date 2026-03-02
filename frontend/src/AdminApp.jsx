@@ -97,6 +97,25 @@ function sanitizeExtraLinks(input) {
     .filter((link) => link.label && link.href && isHttpsUrl(link.href));
 }
 
+function parseCreatedAt(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return null;
+  const match = raw.match(
+    /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/
+  );
+  if (!match) return null;
+  const [, y, m, d, hh, mm, ss = '00'] = match;
+  const dt = new Date(
+    Number(y),
+    Number(m) - 1,
+    Number(d),
+    Number(hh),
+    Number(mm),
+    Number(ss)
+  );
+  return Number.isNaN(dt.getTime()) ? null : dt;
+}
+
 export default function AdminApp() {
   const [adminTab, setAdminTab] = useState('record-input');
   const [showSettings, setShowSettings] = useState(false);
@@ -117,13 +136,19 @@ export default function AdminApp() {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [recordSubmitError, setRecordSubmitError] = useState('');
+  const [showRecentModal, setShowRecentModal] = useState(false);
+  const [isSavingRecord, setIsSavingRecord] = useState(false);
+  const [isSavingCertification, setIsSavingCertification] = useState(false);
+  const [isSavingSocial, setIsSavingSocial] = useState(false);
 
   const [recordForm, setRecordForm] = useState(emptyRecordForm);
   const [useCustomEffectiveSegments, setUseCustomEffectiveSegments] = useState(false);
   const [newTagName, setNewTagName] = useState('');
   const [recordPhotoFile, setRecordPhotoFile] = useState(null);
+  const [recordPhotoInputKey, setRecordPhotoInputKey] = useState(0);
   const [certForm, setCertForm] = useState({ date: new Date().toISOString().slice(0, 10) });
   const [certPhotoFile, setCertPhotoFile] = useState(null);
+  const [certPhotoInputKey, setCertPhotoInputKey] = useState(0);
   const [certDeleteDate, setCertDeleteDate] = useState(new Date().toISOString().slice(0, 10));
   const [deleteDate, setDeleteDate] = useState(new Date().toISOString().slice(0, 10));
   const [socialForm, setSocialForm] = useState({
@@ -132,6 +157,7 @@ export default function AdminApp() {
     instagram_profile_url: 'https://www.instagram.com/ppanzziri/',
     extra_links: [],
   });
+  const isSubmittingAny = isSavingRecord || isSavingCertification || isSavingSocial;
 
   const totalAmount = Number(recordForm.amount || 0);
   const segSum = useMemo(() => {
@@ -181,6 +207,34 @@ export default function AdminApp() {
         .sort((a, b) => (a.date < b.date ? 1 : -1)),
     [certifications, certDeleteDate]
   );
+  const recent24hRecords = useMemo(() => {
+    const now = Date.now();
+    const dayMs = 24 * 60 * 60 * 1000;
+    return (records || [])
+      .filter((record) => {
+        if (!record?.created_at) return false;
+        const parsed = parseCreatedAt(record.created_at);
+        if (!parsed) return false;
+        const ts = parsed.getTime();
+        return now - ts <= dayMs && now - ts >= 0;
+      })
+      .sort((a, b) => {
+        const aTs = parseCreatedAt(a.created_at)?.getTime() || 0;
+        const bTs = parseCreatedAt(b.created_at)?.getTime() || 0;
+        return bTs - aTs;
+      });
+  }, [records]);
+  const fmtRecentDateTime = (value) => {
+    const dt = parseCreatedAt(value);
+    if (!dt) return String(value || '-');
+    return dt.toLocaleString('ko-KR', {
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    });
+  };
   const loadAll = async () => {
     setLoading(true);
     setError('');
@@ -293,6 +347,7 @@ export default function AdminApp() {
 
   const submitRecord = async (e) => {
     e.preventDefault();
+    if (isSavingRecord) return;
     setNotice('');
     setError('');
     setRecordSubmitError('');
@@ -320,6 +375,7 @@ export default function AdminApp() {
 
     const tagPayload = buildTagPayload(recordForm.tags, recordForm.amount);
 
+    setIsSavingRecord(true);
     try {
       await adminRepository.createRecord(
         {
@@ -340,6 +396,7 @@ export default function AdminApp() {
       setUseCustomEffectiveSegments(false);
       setNewTagName('');
       setRecordPhotoFile(null);
+      setRecordPhotoInputKey((prev) => prev + 1);
       setNotice('기록이 저장되었습니다.');
       if (typeof window !== 'undefined') {
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -347,11 +404,14 @@ export default function AdminApp() {
       await loadAll();
     } catch (err) {
       setRecordSubmitError(err instanceof Error ? err.message : '저장 실패');
+    } finally {
+      setIsSavingRecord(false);
     }
   };
 
   const submitCertification = async (e) => {
     e.preventDefault();
+    if (isSavingCertification) return;
     setNotice('');
     setError('');
     if (!certForm.date || !certPhotoFile) {
@@ -359,14 +419,18 @@ export default function AdminApp() {
       return;
     }
 
+    setIsSavingCertification(true);
     try {
       await adminRepository.createCertification({ date: certForm.date, photoFile: certPhotoFile }, password);
       setNotice('인증이 저장되었습니다.');
       setCertForm({ date: new Date().toISOString().slice(0, 10) });
       setCertPhotoFile(null);
+      setCertPhotoInputKey((prev) => prev + 1);
       await loadAll();
     } catch (err) {
       setError(err instanceof Error ? err.message : '인증 저장 실패');
+    } finally {
+      setIsSavingCertification(false);
     }
   };
 
@@ -396,6 +460,7 @@ export default function AdminApp() {
 
   const submitSocialLinks = async (e) => {
     e.preventDefault();
+    if (isSavingSocial) return;
     setNotice('');
     setError('');
     const youtube = String(socialForm.youtube_embed_url || '').trim();
@@ -416,6 +481,7 @@ export default function AdminApp() {
       return;
     }
 
+    setIsSavingSocial(true);
     try {
       await adminRepository.updateSocialLinks(
         {
@@ -430,6 +496,8 @@ export default function AdminApp() {
       await loadAll();
     } catch (err) {
       setError(err instanceof Error ? err.message : '소셜 저장 실패');
+    } finally {
+      setIsSavingSocial(false);
     }
   };
 
@@ -440,6 +508,7 @@ export default function AdminApp() {
         <button
           type="button"
           className="admin-btn ghost"
+          disabled={isSubmittingAny}
           onClick={() => {
             setPasswordDraft(password);
             setSettingsNotice('');
@@ -476,6 +545,7 @@ export default function AdminApp() {
         <button
           type="button"
           className={`admin-tab ${adminTab === 'record-input' ? 'active' : ''}`}
+          disabled={isSubmittingAny}
           onClick={() => setAdminTab('record-input')}
         >
           기록입력
@@ -483,6 +553,7 @@ export default function AdminApp() {
         <button
           type="button"
           className={`admin-tab ${adminTab === 'cert-input' ? 'active' : ''}`}
+          disabled={isSubmittingAny}
           onClick={() => setAdminTab('cert-input')}
         >
           인증입력
@@ -490,6 +561,7 @@ export default function AdminApp() {
         <button
           type="button"
           className={`admin-tab ${adminTab === 'record-delete' ? 'active' : ''}`}
+          disabled={isSubmittingAny}
           onClick={() => setAdminTab('record-delete')}
         >
           기록삭제
@@ -497,6 +569,7 @@ export default function AdminApp() {
         <button
           type="button"
           className={`admin-tab ${adminTab === 'social-input' ? 'active' : ''}`}
+          disabled={isSubmittingAny}
           onClick={() => setAdminTab('social-input')}
         >
           소셜입력
@@ -509,8 +582,19 @@ export default function AdminApp() {
       {adminTab === 'record-input' && (
         <section className="admin-grid admin-tab-panel">
           <article className="admin-card">
-          <h2>기록 입력</h2>
+          <div className="admin-title-row">
+            <h2>기록 입력</h2>
+            <button
+              type="button"
+              className="admin-btn ghost admin-btn-sm"
+              onClick={() => setShowRecentModal(true)}
+              disabled={isSavingRecord}
+            >
+              최근
+            </button>
+          </div>
           <form className="admin-form" onSubmit={submitRecord}>
+            <fieldset className="admin-fieldset" disabled={isSavingRecord}>
             <div className="admin-row two">
               <label>
                 유형
@@ -546,7 +630,7 @@ export default function AdminApp() {
               <label>
                 총 금액
                 <input
-                  className="admin-input"
+                  className="admin-input admin-input-prominent"
                   type="number"
                   min="0"
                   value={recordForm.amount}
@@ -556,7 +640,7 @@ export default function AdminApp() {
               <label>
                 메모
                 <input
-                  className="admin-input"
+                  className="admin-input admin-input-prominent"
                   type="text"
                   value={recordForm.memo}
                   onChange={(e) => setRecordForm((prev) => ({ ...prev, memo: e.target.value }))}
@@ -567,6 +651,7 @@ export default function AdminApp() {
             <label>
               사진 (선택)
               <input
+                key={recordPhotoInputKey}
                 className="admin-input"
                 type="file"
                 accept="image/*"
@@ -659,8 +744,11 @@ export default function AdminApp() {
               )}
             </section>
 
-            <button type="submit" className="admin-btn primary">기록 저장</button>
+            <button type="submit" className="admin-btn primary">
+              {isSavingRecord ? '기록 저장 중...' : '기록 저장'}
+            </button>
             {recordSubmitError && <p className="admin-inline-error">{recordSubmitError}</p>}
+            </fieldset>
           </form>
           </article>
         </section>
@@ -671,6 +759,7 @@ export default function AdminApp() {
           <article className="admin-card">
             <h2>인증 업로드</h2>
             <form className="admin-form" onSubmit={submitCertification}>
+              <fieldset className="admin-fieldset" disabled={isSavingCertification}>
               <label>
                 인증 날짜
                 <input
@@ -683,13 +772,17 @@ export default function AdminApp() {
               <label>
                 인증 사진 파일
                 <input
+                  key={certPhotoInputKey}
                   className="admin-input"
                   type="file"
                   accept="image/*"
                   onChange={(e) => setCertPhotoFile(e.target.files?.[0] || null)}
                 />
               </label>
-              <button type="submit" className="admin-btn primary">인증 저장</button>
+              <button type="submit" className="admin-btn primary">
+                {isSavingCertification ? '인증 저장 중...' : '인증 저장'}
+              </button>
+              </fieldset>
             </form>
           </article>
 
@@ -788,6 +881,7 @@ export default function AdminApp() {
           <article className="admin-card">
             <h2>소셜 링크 입력</h2>
             <form className="admin-form" onSubmit={submitSocialLinks}>
+              <fieldset className="admin-fieldset" disabled={isSavingSocial}>
               <label>
                 유튜브 임베드 URL
                 <input
@@ -818,10 +912,53 @@ export default function AdminApp() {
                   placeholder="https://www.instagram.com/ppanzziri/"
                 />
               </label>
-              <button type="submit" className="admin-btn primary">소셜 저장</button>
+              <button type="submit" className="admin-btn primary">
+                {isSavingSocial ? '소셜 저장 중...' : '소셜 저장'}
+              </button>
+              </fieldset>
             </form>
           </article>
         </section>
+      )}
+
+      {showRecentModal && (
+        <div
+          className="admin-modal"
+          role="dialog"
+          aria-modal="true"
+          aria-label="최근 24시간 입력 내역"
+          onClick={() => setShowRecentModal(false)}
+        >
+          <div className="admin-modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="admin-title-row">
+              <h2>최근 24시간 입력 내역</h2>
+              <button type="button" className="admin-btn ghost admin-btn-sm" onClick={() => setShowRecentModal(false)}>닫기</button>
+            </div>
+            <div className="admin-record-list">
+              {recent24hRecords.length === 0 && <p>최근 24시간 내 입력 내역이 없습니다.</p>}
+              {recent24hRecords.map((record) => (
+                <div key={`recent-${record.id}`} className="admin-record-item">
+                  <div className="admin-record-main">
+                    <strong className="admin-record-date">{fmtDateKRFull(record.transaction_date)}</strong>
+                    <div className="admin-record-meta">
+                      입력 {fmtRecentDateTime(record.created_at)} · {record.type === 'expense' ? '지출' : '수입'} · {fmtKRW(record.amount)}
+                    </div>
+                    <div className="admin-record-meta">{record.memo || '-'}</div>
+                    {(record.tags || []).length > 0 && (
+                      <div className="admin-record-tags inline">
+                        {(record.tags || []).map((tag, idx) => (
+                          <span key={`recent-tag-${record.id}-${idx}`} className="admin-record-tag">
+                            {tag.name}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       )}
     </main>
   );

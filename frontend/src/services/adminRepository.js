@@ -48,6 +48,7 @@ function mapRecordFromApi(raw) {
     id: raw.id,
     type: normalizeType(raw.type),
     transaction_date: raw.transaction_date,
+    created_at: raw.created_at || raw.createdAt || '',
     amount: Number(raw.amount ?? 0),
     memo: raw.memo || '',
     photo_url: raw.photo_url || '',
@@ -228,7 +229,8 @@ export function createMockAdminRepository() {
     async createRecord(record, _password, photoFile) {
       const id = records.length ? Math.max(...records.map((r) => Number(r.id))) + 1 : 1;
       const photoUrl = photoFile instanceof File ? URL.createObjectURL(photoFile) : record.photo_url || '';
-      records = [{ id, ...record, photo_url: photoUrl }, ...records];
+      const createdAt = new Date().toISOString();
+      records = [{ id, created_at: createdAt, ...record, photo_url: photoUrl }, ...records];
       return { id };
     },
 

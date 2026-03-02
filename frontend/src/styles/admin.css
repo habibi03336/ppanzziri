@@ -3,6 +3,27 @@
   background: #f6f6f6;
   color: #111;
   padding: 24px;
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.admin-root button,
+.admin-root input,
+.admin-root select,
+.admin-root textarea {
+  font: inherit;
+  color: inherit;
+}
+
+.admin-root button,
+.admin-root input[type='button'],
+.admin-root input[type='submit'],
+.admin-root input[type='reset'],
+.admin-root input[type='date'],
+.admin-root select {
+  -webkit-appearance: none;
+  appearance: none;
+  border-radius: 10px;
 }
 
 .admin-header {
@@ -42,6 +63,13 @@
 .admin-card h2 {
   margin: 0 0 10px;
   font-size: 18px;
+}
+
+.admin-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .admin-settings {
@@ -86,6 +114,7 @@
   background: #fff;
   border-radius: 10px;
   padding: 10px 12px;
+  font-size: 13px;
   font-weight: 700;
   cursor: pointer;
 }
@@ -117,6 +146,19 @@
 .admin-form {
   display: grid;
   gap: 10px;
+}
+
+.admin-fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.admin-fieldset:disabled {
+  opacity: 0.6;
 }
 
 .admin-row {
@@ -164,13 +206,23 @@
   border-radius: 10px;
   background: #fff;
   padding: 10px 12px;
-  font-size: 14px;
+  font-size: 13px;
   box-sizing: border-box;
   min-width: 0;
 }
 
+.admin-input-prominent {
+  font-size: 12px;
+  font-weight: 400;
+}
+
 .admin-input[type='date'] {
+  width: 100%;
   max-width: 100%;
+  min-width: 0;
+  -webkit-appearance: none;
+  appearance: none;
+  -webkit-min-logical-width: 0;
 }
 
 .admin-type-toggle {
@@ -184,7 +236,7 @@
   border-radius: 10px;
   background: #fff;
   height: 40px;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
   cursor: pointer;
 }
@@ -227,7 +279,7 @@
   background: #fff;
   border-radius: 999px;
   padding: 6px 10px;
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 700;
   cursor: pointer;
 }
@@ -249,7 +301,7 @@
   background: #fff;
   border-radius: 999px;
   padding: 5px 9px;
-  font-size: 12px;
+  font-size: 10px;
   cursor: pointer;
 }
 
@@ -266,7 +318,14 @@
   border-radius: 10px;
   background: #fff;
   padding: 8px 10px;
+  font-size: 12px;
   cursor: pointer;
+}
+
+.admin-btn-sm {
+  padding: 5px 9px;
+  font-size: 12px;
+  line-height: 1.2;
 }
 
 .admin-btn.primary {
@@ -350,8 +409,14 @@
   border-radius: 999px;
   background: #fff;
   padding: 3px 8px;
-  font-size: 12px;
+  font-size: 10px;
   color: #444;
+}
+
+.admin-root .tag-option,
+.admin-root .selected-tag,
+.admin-root .admin-record-tag {
+  font-size: 13px !important;
 }
 
 .admin-record-thumb-link {
@@ -380,6 +445,26 @@
 .admin-record-delete-btn {
   margin-left: auto;
   white-space: nowrap;
+}
+
+.admin-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(0, 0, 0, 0.52);
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+
+.admin-modal-content {
+  width: min(92vw, 720px);
+  max-height: 84vh;
+  overflow: auto;
+  border: 1px solid #e5e5e5;
+  border-radius: 14px;
+  background: #fff;
+  padding: 14px;
 }
 
 @media (max-width: 980px) {

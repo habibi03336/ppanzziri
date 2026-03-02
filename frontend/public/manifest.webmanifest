@@ -1,0 +1,16 @@
+{
+  "name": "PPANZZIRI",
+  "short_name": "PPANZZIRI",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f2f2f2",
+  "theme_color": "#c4002f",
+  "icons": [
+    {
+      "src": "/assets/favicon.ico",
+      "sizes": "16x16 32x32 48x48 64x64",
+      "type": "image/x-icon",
+      "purpose": "any"
+    }
+  ]
+}

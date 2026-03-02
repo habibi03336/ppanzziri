@@ -1,5 +1,4 @@
 const DEFAULT_INSTAGRAM_PROFILE_URL = 'https://www.instagram.com/ppanzziri/';
-const DEFAULT_YOUTUBE_CHANNEL_URL = 'https://www.youtube.com/@ppanzziri';
 
 function getInstagramEmbedSrc(postUrl) {
   const url = String(postUrl || '').trim();
@@ -35,18 +34,6 @@ export default function QuickLinksCard({ social }) {
     <section className="card social-row-card">
       <div className="social-row">
         <div className="embed-wrap video social-youtube">
-          <a
-            className="social-logo-link youtube"
-            href={DEFAULT_YOUTUBE_CHANNEL_URL}
-            target="_blank"
-            rel="noreferrer noopener"
-            aria-label="유튜브 채널 바로가기"
-          >
-            <svg className="social-logo-mark youtube" viewBox="0 0 24 24" aria-hidden="true">
-              <rect x="2" y="5" width="20" height="14" rx="4.2" fill="#FF0000" />
-              <path d="M10 9L16 12L10 15V9Z" fill="#FFFFFF" />
-            </svg>
-          </a>
           {youtubeEmbedUrl ? (
             <iframe
               title="유튜브 최신 영상"
