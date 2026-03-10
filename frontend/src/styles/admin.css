@@ -492,3 +492,16 @@
     grid-template-columns: 1fr;
   }
 }
+
+@media (hover: none) and (pointer: coarse) {
+  .admin-input,
+  .admin-input-prominent,
+  .admin-root input[type='date'],
+  .admin-root input[type='number'],
+  .admin-root input[type='text'],
+  .admin-root input[type='password'],
+  .admin-root textarea,
+  .admin-root select {
+    font-size: 16px !important;
+  }
+}

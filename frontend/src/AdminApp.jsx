@@ -4,6 +4,91 @@ import { adminRepository } from './services/adminRepository.js';
 import './styles/admin.css';
 
 const ADMIN_PASSWORD_KEY = 'ppanzziri_admin_password';
+const ADMIN_PASSWORD_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
+
+function readCookieValue(key) {
+  if (typeof document === 'undefined') return '';
+  const encodedKey = encodeURIComponent(key);
+  const parts = document.cookie ? document.cookie.split('; ') : [];
+  for (const part of parts) {
+    if (!part.startsWith(`${encodedKey}=`)) continue;
+    const raw = part.slice(encodedKey.length + 1);
+    try {
+      return decodeURIComponent(raw);
+    } catch {
+      return raw;
+    }
+  }
+  return '';
+}
+
+function readAdminPasswordFromStorage() {
+  if (typeof window === 'undefined') return '';
+  try {
+    const value = window.localStorage.getItem(ADMIN_PASSWORD_KEY);
+    if (value) return value;
+  } catch {
+    // ignore
+  }
+  try {
+    const value = window.sessionStorage.getItem(ADMIN_PASSWORD_KEY);
+    if (value) return value;
+  } catch {
+    // ignore
+  }
+  return readCookieValue(ADMIN_PASSWORD_KEY);
+}
+
+function writeAdminPasswordToStorage(value) {
+  let saved = false;
+  if (typeof window !== 'undefined') {
+    try {
+      window.localStorage.setItem(ADMIN_PASSWORD_KEY, value);
+      saved = true;
+    } catch {
+      // ignore
+    }
+    try {
+      window.sessionStorage.setItem(ADMIN_PASSWORD_KEY, value);
+      saved = true;
+    } catch {
+      // ignore
+    }
+  }
+  if (typeof document !== 'undefined') {
+    try {
+      document.cookie = `${encodeURIComponent(ADMIN_PASSWORD_KEY)}=${encodeURIComponent(
+        value
+      )}; path=/; max-age=${ADMIN_PASSWORD_COOKIE_MAX_AGE}; samesite=lax`;
+      saved = true;
+    } catch {
+      // ignore
+    }
+  }
+  return saved;
+}
+
+function clearAdminPasswordFromStorage() {
+  if (typeof window !== 'undefined') {
+    try {
+      window.localStorage.removeItem(ADMIN_PASSWORD_KEY);
+    } catch {
+      // ignore
+    }
+    try {
+      window.sessionStorage.removeItem(ADMIN_PASSWORD_KEY);
+    } catch {
+      // ignore
+    }
+  }
+  if (typeof document !== 'undefined') {
+    try {
+      document.cookie = `${encodeURIComponent(ADMIN_PASSWORD_KEY)}=; path=/; max-age=0; samesite=lax`;
+    } catch {
+      // ignore
+    }
+  }
+}
 
 function emptyRecordForm() {
   const today = new Date().toISOString().slice(0, 10);
@@ -122,13 +207,7 @@ export default function AdminApp() {
   const [passwordDraft, setPasswordDraft] = useState('');
   const [settingsNotice, setSettingsNotice] = useState('');
   const [settingsError, setSettingsError] = useState('');
-  const [password, setPassword] = useState(() => {
-    try {
-      return localStorage.getItem(ADMIN_PASSWORD_KEY) || '';
-    } catch {
-      return '';
-    }
-  });
+  const [password, setPassword] = useState(() => readAdminPasswordFromStorage());
   const [records, setRecords] = useState([]);
   const [certifications, setCertifications] = useState([]);
   const [tags, setTags] = useState([]);
@@ -270,24 +349,21 @@ export default function AdminApp() {
     setSettingsNotice('');
     setSettingsError('');
     try {
-      localStorage.setItem(ADMIN_PASSWORD_KEY, passwordDraft);
+      const saved = writeAdminPasswordToStorage(passwordDraft);
+      if (!saved) throw new Error('no-storage');
       setPassword(passwordDraft);
       setSettingsNotice('비밀번호가 저장되었습니다.');
       setShowSettings(false);
       setPasswordDraft('');
     } catch {
-      setSettingsError('저장 실패');
+      setSettingsError('저장 실패 (브라우저 저장소 제한)');
     }
   };
 
   const clearPasswordSetting = () => {
     setSettingsNotice('');
     setSettingsError('');
-    try {
-      localStorage.removeItem(ADMIN_PASSWORD_KEY);
-    } catch {
-      // ignore
-    }
+    clearAdminPasswordFromStorage();
     setPassword('');
     setPasswordDraft('');
     setSettingsNotice('비밀번호가 초기화되었습니다.');

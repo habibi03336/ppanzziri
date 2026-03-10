@@ -1,8 +1,8 @@
 {
-  "id": "/",
-  "name": "PPANZZIRI",
-  "short_name": "PPANZZIRI",
-  "start_url": "/",
+  "id": "/admin",
+  "name": "PPANZZIRI Admin",
+  "short_name": "PP Admin",
+  "start_url": "/admin",
   "scope": "/",
   "display": "standalone",
   "background_color": "#f2f2f2",
