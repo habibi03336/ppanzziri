@@ -15,12 +15,13 @@ const EFFECT_OPTIONS = [
   { value: 'warm', label: '웜톤' },
   { value: 'cool', label: '쿨톤' },
   { value: 'dream', label: '드림' },
-  { value: 'vhs', label: 'VHS' },
   { value: 'glitch', label: '글리치' },
-  { value: 'warp', label: '왜곡' },
+  { value: 'warp', label: '빗물' },
 ];
 const EFFECT_COLOR_OPTIONS = ['normal', 'vivid', 'mono', 'retro', 'party', 'cinema', 'warm', 'cool', 'dream'];
-const EFFECT_MANIP_OPTIONS = ['vhs', 'glitch', 'warp'];
+const EFFECT_MANIP_OPTIONS = ['glitch', 'warp'];
+const COLOR_EFFECT_OPTION_ITEMS = EFFECT_OPTIONS.filter((option) => EFFECT_COLOR_OPTIONS.includes(option.value));
+const MANIP_EFFECT_OPTION_ITEMS = EFFECT_OPTIONS.filter((option) => EFFECT_MANIP_OPTIONS.includes(option.value));
 
 const EMPTY_DASHBOARD = {
   startCapital: 0,
@@ -40,6 +41,14 @@ function toISODateLocal(date) {
   const m = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
+}
+
+function getDefaultPresentationDate(date = new Date()) {
+  const base = new Date(date);
+  if (base.getHours() < 6) {
+    base.setDate(base.getDate() - 1);
+  }
+  return toISODateLocal(base);
 }
 
 function fmtDateYYMMDD(iso) {
@@ -68,15 +77,27 @@ function challengeDayLabel(todayISO) {
   return `D+${day}`;
 }
 
+function openDatePicker(target) {
+  if (!target) return;
+  try {
+    if (typeof target.showPicker === 'function') {
+      target.showPicker();
+    }
+  } catch {
+    // ignore: unsupported browser or restricted gesture context
+  }
+}
+
 export default function PresentationApp() {
   const { data, loading, error, reload } = useDashboardQuery(dashboardRepository);
   const source = data || EMPTY_DASHBOARD;
   const records = Array.isArray(source.records) ? source.records : [];
   const startCapital = Number(source.startCapital || 0);
-  const todayISO = toISODateLocal(new Date());
+  const todayISO = getDefaultPresentationDate(new Date());
   const [targetDateISO, setTargetDateISO] = useState(todayISO);
   const [showSettings, setShowSettings] = useState(false);
-  const [effectMode, setEffectMode] = useState('vivid');
+  const [colorEffectMode, setColorEffectMode] = useState('vivid');
+  const [activeManipEffect, setActiveManipEffect] = useState('');
   const [revealState, setRevealState] = useState({
     started: false,
     revealedCount: 0,
@@ -92,6 +113,30 @@ export default function PresentationApp() {
   const [cameraReady, setCameraReady] = useState(false);
   const [recording, setRecording] = useState(false);
   const [recordingError, setRecordingError] = useState('');
+  const manipTimerRef = useRef(null);
+  const effectMode = activeManipEffect || colorEffectMode;
+
+  useEffect(
+    () => () => {
+      if (manipTimerRef.current) {
+        window.clearTimeout(manipTimerRef.current);
+        manipTimerRef.current = null;
+      }
+    },
+    []
+  );
+
+  const triggerManipEffect = useCallback((effectValue) => {
+    setActiveManipEffect(effectValue);
+    if (manipTimerRef.current) {
+      window.clearTimeout(manipTimerRef.current);
+      manipTimerRef.current = null;
+    }
+    manipTimerRef.current = window.setTimeout(() => {
+      setActiveManipEffect('');
+      manipTimerRef.current = null;
+    }, 5000);
+  }, []);
 
   const stageRef = useRef(null);
   const initCamera = useCallback(async () => {
@@ -137,9 +182,9 @@ export default function PresentationApp() {
   }, [initCamera]);
 
   useEffect(() => {
-    if (!showSettings || !streamRef.current) return;
+    if (!streamRef.current) return;
     const stream = streamRef.current;
-    for (const option of EFFECT_OPTIONS) {
+    for (const option of [...COLOR_EFFECT_OPTION_ITEMS, ...MANIP_EFFECT_OPTION_ITEMS]) {
       const el = previewVideoRefs.current[option.value];
       if (!el) continue;
       if (el.srcObject !== stream) {
@@ -236,11 +281,13 @@ export default function PresentationApp() {
 
   const handlePointerAdvance = useCallback(
     (e) => {
+      if (!recordingActivatedRef.current) return;
+      if (Date.now() < suppressAdvanceUntilRef.current) return;
       const target = e.target instanceof Element ? e.target : null;
       if (!target) return;
       if (
         target.closest(
-          '.presentation-settings-zone, .presentation-status, button, input, select, label, .presentation-settings-panel'
+          '.presentation-settings-modal, .presentation-status, button, input, select, label, .presentation-manip-grid, .presentation-character-btn'
         )
       ) {
         return;
@@ -252,8 +299,9 @@ export default function PresentationApp() {
 
       clickAdvanceTimerRef.current = window.setTimeout(() => {
         clickAdvanceTimerRef.current = null;
+        if (Date.now() < suppressAdvanceUntilRef.current) return;
         advancePresentation();
-      }, 220);
+      }, 420);
     },
     [advancePresentation]
   );
@@ -263,6 +311,8 @@ export default function PresentationApp() {
 
   const recordingCleanupRef = useRef(null);
   const clickAdvanceTimerRef = useRef(null);
+  const suppressAdvanceUntilRef = useRef(0);
+  const recordingActivatedRef = useRef(false);
 
   const stopRecording = useCallback(() => {
     if (recordingCleanupRef.current) {
@@ -410,6 +460,7 @@ export default function PresentationApp() {
 
       recorder.start(1000);
       setRecording(true);
+      recordingActivatedRef.current = true;
 
       const cleanup = () => {
         if (rafId) window.cancelAnimationFrame(rafId);
@@ -446,7 +497,7 @@ export default function PresentationApp() {
     if (!target) return true;
     return Boolean(
       target.closest(
-        '.presentation-settings-zone, .presentation-status, button, input, select, label, .presentation-settings-panel'
+        '.presentation-settings-modal, .presentation-status, button, input, select, label, .presentation-manip-grid, .presentation-character-btn'
       )
     );
   }, []);
@@ -460,6 +511,7 @@ export default function PresentationApp() {
         window.clearTimeout(clickAdvanceTimerRef.current);
         clickAdvanceTimerRef.current = null;
       }
+      suppressAdvanceUntilRef.current = Date.now() + 520;
 
       e.preventDefault();
       if (recording) {
@@ -480,8 +532,8 @@ export default function PresentationApp() {
       <section className="presentation-stage" ref={stageRef}>
         <svg className="presentation-fx-defs" aria-hidden="true" focusable="false">
           <filter id="presentation-warp-filter" x="-20%" y="-20%" width="140%" height="140%">
-            <feTurbulence type="fractalNoise" baseFrequency="0.011 0.02" numOctaves="2" seed="9" result="warpNoise">
-              <animate attributeName="baseFrequency" dur="5s" values="0.010 0.018;0.015 0.024;0.010 0.018" repeatCount="indefinite" />
+            <feTurbulence type="fractalNoise" baseFrequency="0.012 0.022" numOctaves="2" seed="9" result="warpNoise">
+              <animate attributeName="seed" from="1" to="9999" dur="7s" repeatCount="indefinite" />
             </feTurbulence>
             <feDisplacementMap in="SourceGraphic" in2="warpNoise" scale="34" xChannelSelector="R" yChannelSelector="G" />
           </filter>
@@ -498,7 +550,14 @@ export default function PresentationApp() {
         <div className="presentation-fx-layer fx-noise" aria-hidden="true" />
 
         <section className="presentation-overlay left-top">
-          <img src={CHARACTER_IMAGE_URL} alt="뺀질이 캐릭터" />
+          <button
+            type="button"
+            className="presentation-character-btn"
+            onClick={() => setShowSettings(true)}
+            aria-label="설정 열기"
+          >
+            <img src={CHARACTER_IMAGE_URL} alt="뺀질이 캐릭터" />
+          </button>
           <p className="left-main">
             뺀질라이프
             <br />
@@ -510,7 +569,6 @@ export default function PresentationApp() {
         <section className="presentation-overlay right-top">
           <p className="balance-main">{fmtWon(overlay.startOfTodayBalance)}</p>
           <div className="today-list">
-            {overlay.todayItems.length === 0 && revealState.started && <p className="today-item muted">오늘 입력된 내역 없음</p>}
             {visibleItems.map((item) => (
               <p key={`today-${item.id}`} className="today-item">
                 {item.memo || (item.type === 'expense' ? '지출' : '수입')}: {fmtSignedWon(item.type === 'expense' ? -item.amount : item.amount)}
@@ -531,92 +589,93 @@ export default function PresentationApp() {
           </section>
         )}
 
-        <section className="presentation-settings-zone">
-          <button
-            type="button"
-            className="presentation-settings-btn"
-            onClick={() => setShowSettings((prev) => !prev)}
-            aria-expanded={showSettings}
-          >
-            설정
-          </button>
-          {showSettings && (
-            <div className="presentation-settings-panel">
-              <label>
-                해당일
-                <input
-                  type="date"
-                  value={targetDateISO}
-                  onChange={(e) => setTargetDateISO(e.target.value || todayISO)}
+        <section className="presentation-manip-grid" aria-label="영상 조작 효과 선택">
+          {MANIP_EFFECT_OPTION_ITEMS.map((option) => {
+            const selected = activeManipEffect === option.value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                className={`presentation-manip-card${selected ? ' active' : ''}`}
+                onClick={() => triggerManipEffect(option.value)}
+                aria-pressed={selected}
+              >
+                <video
+                  ref={(node) => {
+                    previewVideoRefs.current[option.value] = node;
+                  }}
+                  className={`presentation-manip-preview effect-${option.value}`}
+                  playsInline
+                  muted
+                  autoPlay
+                  aria-hidden="true"
                 />
-              </label>
-              <section className="presentation-effect-picker" aria-label="효과 선택">
-                <p className="presentation-effect-title">효과</p>
-                <div className="presentation-effect-group">
-                  <p className="presentation-effect-subtitle">색감 효과</p>
-                  <div className="presentation-effect-grid">
-                    {EFFECT_OPTIONS.filter((option) => EFFECT_COLOR_OPTIONS.includes(option.value)).map((option) => {
-                      const selected = effectMode === option.value;
-                      return (
-                        <button
-                          key={option.value}
-                          type="button"
-                          className={`presentation-effect-option${selected ? ' active' : ''}`}
-                          onClick={() => setEffectMode(option.value)}
-                          aria-pressed={selected}
-                        >
-                          <video
-                            ref={(node) => {
-                              previewVideoRefs.current[option.value] = node;
-                            }}
-                            className={`presentation-effect-preview-video effect-${option.value}`}
-                            playsInline
-                            muted
-                            autoPlay
-                            aria-hidden="true"
-                          />
-                          <span className="presentation-effect-label">{option.label}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-                <div className="presentation-effect-group">
-                  <p className="presentation-effect-subtitle">영상 조작 효과</p>
-                  <div className="presentation-effect-grid">
-                    {EFFECT_OPTIONS.filter((option) => EFFECT_MANIP_OPTIONS.includes(option.value)).map((option) => {
-                      const selected = effectMode === option.value;
-                      return (
-                        <button
-                          key={option.value}
-                          type="button"
-                          className={`presentation-effect-option${selected ? ' active' : ''}`}
-                          onClick={() => setEffectMode(option.value)}
-                          aria-pressed={selected}
-                        >
-                          <video
-                            ref={(node) => {
-                              previewVideoRefs.current[option.value] = node;
-                            }}
-                            className={`presentation-effect-preview-video effect-${option.value}`}
-                            playsInline
-                            muted
-                            autoPlay
-                            aria-hidden="true"
-                          />
-                          <span className="presentation-effect-label">{option.label}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </section>
-              <button type="button" className="presentation-btn ghost" onClick={() => setTargetDateISO(todayISO)}>
-                오늘로
+                <span className="presentation-manip-label">{option.label}</span>
               </button>
-            </div>
-          )}
+            );
+          })}
         </section>
+
+        {showSettings && (
+          <section className="presentation-settings-modal" onClick={() => setShowSettings(false)}>
+            <div className="presentation-settings-modal-content" onClick={(e) => e.stopPropagation()}>
+              <button
+                type="button"
+                className="presentation-settings-close"
+                aria-label="설정 닫기"
+                onClick={() => setShowSettings(false)}
+              >
+                ×
+              </button>
+              <div className="presentation-settings-panel">
+                <div className="presentation-date-row">
+                  <label className="presentation-date-field">
+                    해당일
+                    <input
+                      type="date"
+                      value={targetDateISO}
+                      onChange={(e) => setTargetDateISO(e.target.value || todayISO)}
+                      onClick={(e) => openDatePicker(e.currentTarget)}
+                      onFocus={(e) => openDatePicker(e.currentTarget)}
+                    />
+                  </label>
+                  <button type="button" className="presentation-btn ghost presentation-today-btn" onClick={() => setTargetDateISO(todayISO)}>
+                    오늘로
+                  </button>
+                </div>
+                <section className="presentation-effect-picker" aria-label="색감 효과 선택">
+                  <p className="presentation-effect-title">색감 효과</p>
+                  <div className="presentation-effect-grid">
+                    {COLOR_EFFECT_OPTION_ITEMS.map((option) => {
+                      const selected = colorEffectMode === option.value;
+                      return (
+                        <button
+                          key={option.value}
+                          type="button"
+                          className={`presentation-effect-option${selected ? ' active' : ''}`}
+                          onClick={() => setColorEffectMode(option.value)}
+                          aria-pressed={selected}
+                        >
+                          <video
+                            ref={(node) => {
+                              previewVideoRefs.current[option.value] = node;
+                            }}
+                            className={`presentation-effect-preview-video effect-${option.value}`}
+                            playsInline
+                            muted
+                            autoPlay
+                            aria-hidden="true"
+                          />
+                          <span className="presentation-effect-label">{option.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </section>
+              </div>
+            </div>
+          </section>
+        )}
 
         {(loading || error || cameraError || !cameraReady || recordingError) && (
           <section className="presentation-status">

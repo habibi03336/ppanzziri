@@ -129,6 +129,14 @@ body.presentation-mode {
   height: auto;
 }
 
+.presentation-character-btn {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
 .left-main {
   margin: -40px 0 0;
   font-size: clamp(14px, 1.45vw, 30px);
@@ -210,24 +218,82 @@ body.presentation-mode {
   font-weight: 600;
 }
 
-.presentation-settings-zone {
+.presentation-manip-grid {
   position: absolute;
   left: max(12px, env(safe-area-inset-left));
   bottom: max(12px, env(safe-area-inset-bottom));
   z-index: 5;
   display: grid;
-  gap: 8px;
+  grid-template-columns: repeat(2, 58px);
+  gap: 6px;
 }
 
-.presentation-settings-btn {
-  width: 54px;
-  height: 28px;
-  border: 1px solid rgba(255, 255, 255, 0.45);
+.presentation-manip-card {
+  width: 58px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  cursor: pointer;
+  padding: 4px;
+  display: grid;
+  gap: 3px;
+  justify-items: stretch;
+}
+
+.presentation-manip-card.active {
+  border-color: rgba(255, 178, 46, 0.95);
+  background: rgba(255, 178, 46, 0.22);
+}
+
+.presentation-manip-preview {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1 / 1;
+  border-radius: 6px;
+  border: 0;
+  object-fit: cover;
+  display: block;
+  transform: scaleX(-1);
+  background: #0e0e0e;
+  clip-path: inset(0 round 6px);
+}
+
+.presentation-manip-label {
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+  text-align: center;
+}
+
+.presentation-settings-modal {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  background: rgba(0, 0, 0, 0.5);
+  display: grid;
+  place-items: center;
+  padding: 14px;
+}
+
+.presentation-settings-modal-content {
+  position: relative;
+  width: min(92vw, 520px);
+}
+
+.presentation-settings-close {
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  z-index: 1;
+  width: 30px;
+  height: 30px;
   border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
   background: rgba(0, 0, 0, 0.45);
   color: #fff;
-  font-size: 11px;
-  font-weight: 700;
+  font-size: 20px;
+  line-height: 1;
   cursor: pointer;
 }
 
@@ -236,7 +302,7 @@ body.presentation-mode {
   border-radius: 12px;
   background: rgba(0, 0, 0, 0.55);
   backdrop-filter: blur(3px);
-  padding: 10px;
+  padding: 26px 10px 10px;
   display: grid;
   gap: 8px;
   min-width: 168px;
@@ -247,6 +313,22 @@ body.presentation-mode {
   gap: 5px;
   font-size: 12px;
   font-weight: 700;
+}
+
+.presentation-date-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: end;
+}
+
+.presentation-date-field {
+  min-width: 0;
+}
+
+.presentation-today-btn {
+  min-height: 36px;
+  white-space: nowrap;
 }
 
 .presentation-settings-panel input[type='date'] {
@@ -358,6 +440,14 @@ body.presentation-mode {
 }
 
 .presentation-effect-preview-video.effect-warp {
+  filter: saturate(1.15) contrast(1.08);
+}
+
+.presentation-manip-preview.effect-glitch {
+  filter: contrast(1.15) saturate(1.25);
+}
+
+.presentation-manip-preview.effect-warp {
   filter: saturate(1.15) contrast(1.08);
 }
 
@@ -579,5 +669,13 @@ body.presentation-mode {
 
   .presentation-effect-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .presentation-manip-grid {
+    grid-template-columns: repeat(2, 52px);
+  }
+
+  .presentation-manip-card {
+    width: 52px;
   }
 }
