@@ -10,6 +10,8 @@ const INSTAGRAM_PROFILES = [
     href: 'https://www.instagram.com/runaway_ppanzziri/',
   },
 ];
+const FIXED_YOUTUBE_EMBED_URL =
+  'https://www.youtube.com/embed/videoseries?si=iqO0lKb1H4b5vhF2&list=PLQL7kfEcNRg1qpdAqRjF6Uumw9MKQh4D8';
 
 function normalizeExtraLinks(value) {
   if (!Array.isArray(value)) return [];
@@ -22,7 +24,6 @@ function normalizeExtraLinks(value) {
 }
 
 export default function QuickLinksCard({ social }) {
-  const youtubeEmbedUrl = String(social?.youtube_embed_url || social?.youtubeEmbedUrl || '').trim();
   const extraLinks = normalizeExtraLinks(social?.extra_links ?? social?.extraLinks);
   const renderProfileLabel = (label) => {
     const parts = String(label || '').split('_');
@@ -40,18 +41,14 @@ export default function QuickLinksCard({ social }) {
     <section className="card social-row-card">
       <div className="social-row">
         <div className="embed-wrap video social-youtube">
-          {youtubeEmbedUrl ? (
-            <iframe
-              title="유튜브 최신 영상"
-              src={youtubeEmbedUrl}
-              loading="lazy"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              allowFullScreen
-              referrerPolicy="strict-origin-when-cross-origin"
-            />
-          ) : (
-            <div className="instagram-fallback">유튜브 링크 없음</div>
-          )}
+          <iframe
+            title="유튜브 영상 시리즈"
+            src={FIXED_YOUTUBE_EMBED_URL}
+            loading="lazy"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowFullScreen
+            referrerPolicy="strict-origin-when-cross-origin"
+          />
         </div>
 
         <section className="social-instagram-profiles">
