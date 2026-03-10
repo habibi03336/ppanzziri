@@ -18,6 +18,12 @@ if (manifestLink) {
 document.body.classList.remove('app-mode', 'admin-mode', 'presentation-mode');
 document.body.classList.add(isAdminRoute ? 'admin-mode' : isPresentationRoute ? 'presentation-mode' : 'app-mode');
 
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  });
+}
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <RootApp />

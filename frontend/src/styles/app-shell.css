@@ -590,18 +590,22 @@ body.admin-mode {
 }
 
 .segbtn {
+  -webkit-appearance: none;
+  appearance: none;
   border: 1px solid var(--border);
   border-radius: 999px;
-  background: #fff;
+  background: #f1f1f1;
   padding: 6px 10px;
   font-weight: 700;
   font-size: 12px;
+  color: #7b7b7b;
   cursor: pointer;
 }
 
 .segbtn.active {
   color: var(--brand);
   border-color: rgba(196, 0, 47, 0.3);
+  background: #fff5f8;
 }
 
 .curve {
@@ -1550,6 +1554,17 @@ body.admin-mode {
     transform: none;
     width: 100%;
     height: 100%;
+  }
+
+  .area-tags .card-header h2 {
+    font-size: 20px;
+    line-height: 1.1;
+  }
+
+  .area-tags .card-header .muted {
+    font-size: 11px;
+    line-height: 1.1;
+    white-space: nowrap;
   }
 
   .instagram-profile-link {
