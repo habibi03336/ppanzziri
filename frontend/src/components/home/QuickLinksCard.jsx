@@ -1,17 +1,15 @@
-const DEFAULT_INSTAGRAM_PROFILE_URL = 'https://www.instagram.com/ppanzziri/';
-
-function getInstagramEmbedSrc(postUrl) {
-  const url = String(postUrl || '').trim();
-  if (!url || !url.includes('/p/')) return '';
-  try {
-    const parsed = new URL(url);
-    const cleanPath = parsed.pathname.replace(/\/+$/, '');
-    if (cleanPath.endsWith('/embed')) return `${parsed.origin}${cleanPath}`;
-    return `${parsed.origin}${cleanPath}/embed`;
-  } catch {
-    return '';
-  }
-}
+const INSTAGRAM_PROFILES = [
+  {
+    label: 'ppanzziri',
+    description: 'show my love to the world',
+    href: 'https://www.instagram.com/ppanzziri/',
+  },
+  {
+    label: 'runaway_ppanzziri',
+    description: '뺀질이식 일상감상',
+    href: 'https://www.instagram.com/runaway_ppanzziri/',
+  },
+];
 
 function normalizeExtraLinks(value) {
   if (!Array.isArray(value)) return [];
@@ -25,10 +23,18 @@ function normalizeExtraLinks(value) {
 
 export default function QuickLinksCard({ social }) {
   const youtubeEmbedUrl = String(social?.youtube_embed_url || social?.youtubeEmbedUrl || '').trim();
-  const instagramPostUrl = String(social?.instagram_post_url || social?.instagramPostUrl || '').trim();
-  const instagramProfileUrl = DEFAULT_INSTAGRAM_PROFILE_URL;
-  const instagramEmbedSrc = getInstagramEmbedSrc(instagramPostUrl);
   const extraLinks = normalizeExtraLinks(social?.extra_links ?? social?.extraLinks);
+  const renderProfileLabel = (label) => {
+    const parts = String(label || '').split('_');
+    if (parts.length <= 1) return label;
+    return parts.map((part, idx) => (
+      <span key={`${label}-${idx}`}>
+        {idx > 0 ? '_' : ''}
+        {part}
+        {idx < parts.length - 1 ? <wbr /> : null}
+      </span>
+    ));
+  };
 
   return (
     <section className="card social-row-card">
@@ -48,41 +54,35 @@ export default function QuickLinksCard({ social }) {
           )}
         </div>
 
-        {instagramEmbedSrc ? (
-          <div className="embed-wrap post social-instagram">
+        <section className="social-instagram-profiles">
+          {INSTAGRAM_PROFILES.map((profile) => (
             <a
-              className="social-logo-link instagram"
-              href={instagramProfileUrl}
+              key={profile.href}
+              className="instagram-profile-link"
+              href={profile.href}
               target="_blank"
               rel="noreferrer noopener"
-              aria-label="인스타그램 프로필 바로가기"
             >
               <svg className="social-logo-mark instagram" viewBox="0 0 24 24" aria-hidden="true">
                 <defs>
-                  <linearGradient id="igLogoGradient" x1="0%" y1="100%" x2="100%" y2="0%">
+                  <linearGradient id={`igLogoGradient-${profile.label}`} x1="0%" y1="100%" x2="100%" y2="0%">
                     <stop offset="0%" stopColor="#f58529" />
                     <stop offset="35%" stopColor="#dd2a7b" />
                     <stop offset="70%" stopColor="#8134af" />
                     <stop offset="100%" stopColor="#515bd4" />
                   </linearGradient>
                 </defs>
-                <rect x="2" y="2" width="20" height="20" rx="6" fill="url(#igLogoGradient)" />
+                <rect x="2" y="2" width="20" height="20" rx="6" fill={`url(#igLogoGradient-${profile.label})`} />
                 <circle cx="12" cy="12" r="4.3" fill="none" stroke="#FFFFFF" strokeWidth="1.8" />
                 <circle cx="17.3" cy="6.8" r="1.2" fill="#FFFFFF" />
               </svg>
+              <span className="instagram-profile-meta">
+                <span className="instagram-profile-name">{renderProfileLabel(profile.label)}</span>
+                {profile.description ? <span className="instagram-profile-desc">{profile.description}</span> : null}
+              </span>
             </a>
-            <iframe
-              title="인스타 최신 게시물"
-              src={instagramEmbedSrc}
-              loading="lazy"
-              referrerPolicy="strict-origin-when-cross-origin"
-            />
-          </div>
-        ) : (
-          <a className="instagram-fallback social-instagram" href={instagramProfileUrl} target="_blank" rel="noreferrer noopener">
-            최신 게시물 보기
-          </a>
-        )}
+          ))}
+        </section>
       </div>
 
       {extraLinks.length > 0 && (

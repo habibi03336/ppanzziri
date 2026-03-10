@@ -17,7 +17,7 @@ export default function HomePage({ dashboard, onNavigate }) {
         <div className="area-curve"><SurvivalCurveCard balanceSeries={dashboard.balanceSeries} start30={dashboard.start30} startCapital={dashboard.START_CAPITAL} /></div>
         <div className="area-tags"><TagUsageCard tagItems={dashboard.tagItems} /></div>
         <div className="area-daily"><DailyCostCard runwayDays={dashboard.runwayDays} avg90={dashboard.avg90} /></div>
-        <div className="area-records"><RecentRecordsCard recent7={dashboard.recent7} onGoRecords={() => onNavigate('records')} /></div>
+        <div className="area-records"><RecentRecordsCard groupedRecords={dashboard.groupedRecords} onGoRecords={() => onNavigate('records')} /></div>
         <div className="area-proof"><ProofCarouselCard certifications={dashboard.certifications} /></div>
       </div>
     </section>

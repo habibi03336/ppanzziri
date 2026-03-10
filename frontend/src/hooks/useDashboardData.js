@@ -4,7 +4,6 @@ import {
   averageDailyFromMap,
   buildDailyEffectiveMap,
   groupByTransactionDate,
-  recordsInLastNDays,
   sortByDateAsc,
   tagTotalsEffectiveLast30,
 } from '../utils/calculations.js';
@@ -76,7 +75,6 @@ export default function useDashboardData(records, certifications, startCapital, 
       }));
     })();
 
-    const recent7 = recordsInLastNDays(records, asOfDate, 7);
     const recordPhotos = [...records]
       .filter((record) => record.photo_url)
       .sort((a, b) => {
@@ -113,7 +111,6 @@ export default function useDashboardData(records, certifications, startCapital, 
       runwayDays,
       tagItems,
       topTags,
-      recent7,
       recordPhotos,
       groupedRecords,
       latestProof,
