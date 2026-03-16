@@ -5,6 +5,7 @@ import './styles/presentation.css';
 
 const CHALLENGE_START_DATE = '2026-02-08';
 const CHARACTER_IMAGE_URL = '/assets/ppanzziri-character.png';
+const PIE_COLORS = ['#ff7a59', '#ffb347', '#ffd166', '#7bd389', '#4ecdc4', '#6ea8fe', '#9b7bff', '#ff7eb6', '#c7f464', '#f78fb3'];
 const EFFECT_OPTIONS = [
   { value: 'normal', label: '일반' },
   { value: 'vivid', label: '비비드' },
@@ -43,6 +44,13 @@ function toISODateLocal(date) {
   return `${y}-${m}-${day}`;
 }
 
+function addDaysToISODate(iso, offset) {
+  const [y, m, d] = String(iso).split('-').map(Number);
+  const base = new Date(y, m - 1, d);
+  base.setDate(base.getDate() + offset);
+  return toISODateLocal(base);
+}
+
 function getDefaultPresentationDate(date = new Date()) {
   const base = new Date(date);
   if (base.getHours() < 6) {
@@ -52,8 +60,8 @@ function getDefaultPresentationDate(date = new Date()) {
 }
 
 function fmtDateYYMMDD(iso) {
-  const [y, m, d] = String(iso).split('-');
-  return `${String(y || '').slice(-2)}.${m || '00'}.${d || '00'}`;
+  const [, m, d] = String(iso).split('-');
+  return `${m || '00'}.${d || '00'}`;
 }
 
 function fmtWon(amount) {
@@ -84,8 +92,145 @@ function openDatePicker(target) {
       target.showPicker();
     }
   } catch {
-    // ignore: unsupported browser or restricted gesture context
+    // ignore unsupported browser or restricted gesture context
   }
+}
+
+async function requestCameraStream() {
+  const constraintsList = [
+    {
+      video: {
+        facingMode: 'user',
+        aspectRatio: { ideal: 16 / 9 },
+        width: { ideal: 1920 },
+        height: { ideal: 1080 },
+        frameRate: { ideal: 30, max: 60 },
+      },
+      audio: false,
+    },
+    {
+      video: {
+        facingMode: 'user',
+        aspectRatio: { ideal: 16 / 9 },
+        width: { ideal: 1280 },
+        height: { ideal: 720 },
+        frameRate: { ideal: 30 },
+      },
+      audio: false,
+    },
+    {
+      video: {
+        facingMode: 'user',
+      },
+      audio: false,
+    },
+  ];
+
+  let lastError = null;
+  for (const constraints of constraintsList) {
+    try {
+      return await navigator.mediaDevices.getUserMedia(constraints);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError || new Error('카메라 권한 요청 실패');
+}
+
+function normalizeRange(startDateISO, endDateISO) {
+  return startDateISO <= endDateISO ? [startDateISO, endDateISO] : [endDateISO, startDateISO];
+}
+
+function buildTagTotals(records) {
+  const totals = {
+    expense: new Map(),
+    income: new Map(),
+  };
+
+  records.forEach((record) => {
+    const bucket = record.type === 'income' ? totals.income : totals.expense;
+    const tags = Array.isArray(record.tags) && record.tags.length > 0 ? record.tags : [{ name: '미분류', amount: record.amount }];
+    tags.forEach((tag) => {
+      const name = String(tag?.name || '미분류').trim() || '미분류';
+      const amount = Number(tag?.amount ?? 0);
+      bucket.set(name, (bucket.get(name) || 0) + amount);
+    });
+  });
+
+  return {
+    expense: Array.from(totals.expense.entries())
+      .map(([name, amount], index) => ({ name, amount, color: PIE_COLORS[index % PIE_COLORS.length] }))
+      .sort((a, b) => b.amount - a.amount),
+    income: Array.from(totals.income.entries())
+      .map(([name, amount], index) => ({ name, amount, color: PIE_COLORS[index % PIE_COLORS.length] }))
+      .sort((a, b) => b.amount - a.amount),
+  };
+}
+
+function buildPieSegments(items) {
+  const total = items.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  if (!total) return [];
+
+  let accumulated = -Math.PI / 2;
+  return items.map((item) => {
+    const ratio = Number(item.amount || 0) / total;
+    const startAngle = accumulated;
+    const endAngle = accumulated + ratio * Math.PI * 2;
+    accumulated = endAngle;
+    return { ...item, startAngle, endAngle };
+  });
+}
+
+function polarToCartesian(cx, cy, r, angle) {
+  return {
+    x: cx + r * Math.cos(angle),
+    y: cy + r * Math.sin(angle),
+  };
+}
+
+function describeArc(cx, cy, r, startAngle, endAngle) {
+  const start = polarToCartesian(cx, cy, r, endAngle);
+  const end = polarToCartesian(cx, cy, r, startAngle);
+  const largeArcFlag = endAngle - startAngle > Math.PI ? 1 : 0;
+  return `M ${cx} ${cy} L ${start.x} ${start.y} A ${r} ${r} 0 ${largeArcFlag} 0 ${end.x} ${end.y} Z`;
+}
+
+function TagPieChart({ title, items, emptyLabel }) {
+  const segments = buildPieSegments(items);
+
+  return (
+    <section className="presentation-tag-card">
+      <p className="presentation-tag-title">{title}</p>
+      {segments.length > 0 ? (
+        <>
+          <svg className="presentation-tag-chart" viewBox="0 0 120 120" aria-hidden="true">
+            {segments.map((segment) => (
+              <path
+                key={`${title}-${segment.name}`}
+                d={describeArc(60, 60, 54, segment.startAngle, segment.endAngle)}
+                fill={segment.color}
+                stroke="rgba(0, 0, 0, 0.28)"
+                strokeWidth="1"
+              />
+            ))}
+            <circle cx="60" cy="60" r="26" fill="rgba(0, 0, 0, 0.72)" />
+          </svg>
+          <div className="presentation-tag-legend">
+            {items.map((item) => (
+              <div key={`${title}-${item.name}`} className="presentation-tag-legend-item">
+                <span className="presentation-tag-chip" style={{ backgroundColor: item.color }} aria-hidden="true" />
+                <span className="presentation-tag-legend-name">{item.name}</span>
+                <span className="presentation-tag-legend-value">{fmtWon(item.amount)}</span>
+              </div>
+            ))}
+          </div>
+        </>
+      ) : (
+        <p className="presentation-tag-empty">{emptyLabel}</p>
+      )}
+    </section>
+  );
 }
 
 export default function PresentationApp() {
@@ -94,14 +239,17 @@ export default function PresentationApp() {
   const records = Array.isArray(source.records) ? source.records : [];
   const startCapital = Number(source.startCapital || 0);
   const todayISO = getDefaultPresentationDate(new Date());
-  const [targetDateISO, setTargetDateISO] = useState(todayISO);
+  const defaultStartISO = addDaysToISODate(todayISO, -6);
+  const [rangeStartISO, setRangeStartISO] = useState(defaultStartISO);
+  const [rangeEndISO, setRangeEndISO] = useState(todayISO);
   const [showSettings, setShowSettings] = useState(false);
   const [colorEffectMode, setColorEffectMode] = useState('vivid');
   const [activeManipEffect, setActiveManipEffect] = useState('');
   const [revealState, setRevealState] = useState({
     started: false,
+    currentDayIndex: 0,
     revealedCount: 0,
-    nextIndex: 0,
+    completedDayCount: 0,
     activePhoto: '',
     finalVisible: false,
   });
@@ -135,7 +283,7 @@ export default function PresentationApp() {
     manipTimerRef.current = window.setTimeout(() => {
       setActiveManipEffect('');
       manipTimerRef.current = null;
-    }, 5000);
+    }, 3000);
   }, []);
 
   const stageRef = useRef(null);
@@ -148,14 +296,7 @@ export default function PresentationApp() {
         streamRef.current = null;
       }
 
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: 'user',
-          width: { ideal: 1920 },
-          height: { ideal: 1080 },
-        },
-        audio: false,
-      });
+      const stream = await requestCameraStream();
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
@@ -194,46 +335,118 @@ export default function PresentationApp() {
     }
   }, [showSettings, cameraReady]);
 
-  const overlay = useMemo(() => {
+  const [normalizedStartISO, normalizedEndISO] = useMemo(
+    () => normalizeRange(rangeStartISO || todayISO, rangeEndISO || todayISO),
+    [rangeEndISO, rangeStartISO, todayISO]
+  );
+
+  const presentationData = useMemo(() => {
     const sorted = [...records].sort((a, b) => {
       if (a.transaction_date !== b.transaction_date) return a.transaction_date < b.transaction_date ? -1 : 1;
       return Number(a.id || 0) - Number(b.id || 0);
     });
 
-    let startOfTodayBalance = startCapital;
-    for (const item of sorted) {
-      if (item.transaction_date >= targetDateISO) break;
-      startOfTodayBalance += item.type === 'income' ? Number(item.amount || 0) : -Number(item.amount || 0);
-    }
+    let startBalance = startCapital;
+    sorted.forEach((item) => {
+      if (item.transaction_date < normalizedStartISO) {
+        startBalance += item.type === 'income' ? Number(item.amount || 0) : -Number(item.amount || 0);
+      }
+    });
 
-    const todayItems = sorted
-      .filter((item) => item.transaction_date === targetDateISO)
-      .sort((a, b) => Number(a.id || 0) - Number(b.id || 0));
+    const inRange = sorted.filter((item) => item.transaction_date >= normalizedStartISO && item.transaction_date <= normalizedEndISO);
+    const groupedMap = new Map();
+    inRange.forEach((item) => {
+      if (!groupedMap.has(item.transaction_date)) {
+        groupedMap.set(item.transaction_date, []);
+      }
+      groupedMap.get(item.transaction_date).push(item);
+    });
 
-    const todayDelta = todayItems.reduce(
-      (sum, item) => sum + (item.type === 'income' ? Number(item.amount || 0) : -Number(item.amount || 0)),
-      0
-    );
-    const endOfTodayBalance = startOfTodayBalance + todayDelta;
+    let runningBalance = startBalance;
+    const groups = Array.from(groupedMap.entries()).map(([date, items]) => {
+      const delta = items.reduce(
+        (sum, item) => sum + (item.type === 'income' ? Number(item.amount || 0) : -Number(item.amount || 0)),
+        0
+      );
+      runningBalance += delta;
+      return {
+        date,
+        items,
+        delta,
+        endBalance: runningBalance,
+      };
+    });
+
+    const tagTotals = buildTagTotals(inRange);
 
     return {
-      dayLabel: challengeDayLabel(targetDateISO),
-      dateLabel: fmtDateYYMMDD(targetDateISO),
-      startOfTodayBalance,
-      todayItems,
-      endOfTodayBalance,
+      startBalance,
+      endBalance: runningBalance,
+      groups,
+      tagTotals,
     };
-  }, [records, startCapital, targetDateISO]);
+  }, [normalizedEndISO, normalizedStartISO, records, startCapital]);
+
+  const currentGroup = presentationData.groups[revealState.currentDayIndex] || null;
+  const focusDateISO = revealState.finalVisible
+    ? normalizedEndISO
+    : currentGroup?.date || presentationData.groups[presentationData.groups.length - 1]?.date || normalizedEndISO;
+  const summaryGroups = presentationData.groups.slice(0, revealState.completedDayCount);
+  const visibleCurrentItems =
+    revealState.finalVisible || !currentGroup ? [] : currentGroup.items.slice(0, revealState.revealedCount);
+
+  const photoHistory = useMemo(() => {
+    const currentThumbItems = [...visibleCurrentItems];
+    if (revealState.activePhoto && currentThumbItems.length > 0) {
+      const lastVisibleItem = currentThumbItems[currentThumbItems.length - 1];
+      if (lastVisibleItem?.photo_url === revealState.activePhoto) {
+        currentThumbItems.pop();
+      }
+    }
+
+    const items = [
+      ...summaryGroups.flatMap((group) => group.items),
+      ...currentThumbItems,
+    ];
+    return items.filter((item) => item.photo_url).map((item) => ({
+      id: item.id,
+      photo_url: item.photo_url,
+      date: item.transaction_date,
+    }));
+  }, [revealState.activePhoto, summaryGroups, visibleCurrentItems]);
 
   const advancePresentation = useCallback(() => {
     setRevealState((prev) => {
-      if (prev.nextIndex < overlay.todayItems.length) {
-        const current = overlay.todayItems[prev.nextIndex];
+      const groups = presentationData.groups;
+      const current = groups[prev.currentDayIndex];
+
+      if (!current) {
+        return {
+          ...prev,
+          started: true,
+          finalVisible: true,
+        };
+      }
+
+      if (prev.revealedCount < current.items.length) {
+        const nextItem = current.items[prev.revealedCount];
         return {
           started: true,
+          currentDayIndex: prev.currentDayIndex,
           revealedCount: prev.revealedCount + 1,
-          nextIndex: prev.nextIndex + 1,
-          activePhoto: current?.photo_url || '',
+          completedDayCount: prev.completedDayCount,
+          activePhoto: nextItem?.photo_url || '',
+          finalVisible: false,
+        };
+      }
+
+      if (prev.currentDayIndex < groups.length - 1) {
+        return {
+          started: true,
+          currentDayIndex: prev.currentDayIndex + 1,
+          revealedCount: 0,
+          completedDayCount: prev.currentDayIndex + 1,
+          activePhoto: '',
           finalVisible: false,
         };
       }
@@ -241,24 +454,27 @@ export default function PresentationApp() {
       return {
         ...prev,
         started: true,
+        completedDayCount: groups.length,
+        activePhoto: '',
         finalVisible: true,
       };
     });
-  }, [overlay.todayItems]);
+  }, [presentationData.groups]);
 
   useEffect(() => {
     setRevealState({
       started: false,
+      currentDayIndex: 0,
       revealedCount: 0,
-      nextIndex: 0,
+      completedDayCount: 0,
       activePhoto: '',
       finalVisible: false,
     });
-  }, [targetDateISO, overlay.todayItems.length]);
+  }, [normalizedEndISO, normalizedStartISO, presentationData.groups.length]);
 
   useEffect(() => {
     const onKeyDown = (e) => {
-      if (e.code !== 'Space') return;
+      if (e.code !== 'Space' && e.code !== 'Tab') return;
 
       const activeTag = String(document.activeElement?.tagName || '').toLowerCase();
       if (activeTag === 'input' || activeTag === 'textarea' || activeTag === 'select') return;
@@ -275,13 +491,12 @@ export default function PresentationApp() {
     if (!revealState.activePhoto) return undefined;
     const timer = window.setTimeout(() => {
       setRevealState((prev) => (prev.activePhoto ? { ...prev, activePhoto: '' } : prev));
-    }, 5000);
+    }, 3000);
     return () => window.clearTimeout(timer);
   }, [revealState.activePhoto]);
 
   const handlePointerAdvance = useCallback(
     (e) => {
-      if (!recordingActivatedRef.current) return;
       if (Date.now() < suppressAdvanceUntilRef.current) return;
       const target = e.target instanceof Element ? e.target : null;
       if (!target) return;
@@ -293,9 +508,7 @@ export default function PresentationApp() {
         return;
       }
 
-      if (clickAdvanceTimerRef.current) {
-        return;
-      }
+      if (clickAdvanceTimerRef.current) return;
 
       clickAdvanceTimerRef.current = window.setTimeout(() => {
         clickAdvanceTimerRef.current = null;
@@ -306,7 +519,6 @@ export default function PresentationApp() {
     [advancePresentation]
   );
 
-  const visibleItems = overlay.todayItems.slice(0, revealState.revealedCount);
   const showFinal = revealState.finalVisible && !revealState.activePhoto;
 
   const recordingCleanupRef = useRef(null);
@@ -438,7 +650,7 @@ export default function PresentationApp() {
       recorder.ondataavailable = (event) => {
         if (event.data && event.data.size > 0) chunks.push(event.data);
       };
-      recorder.onstop = () => {
+      recorder.onstop = async () => {
         const blob = new Blob(chunks, { type: mimeType });
         if (blob.size > 0) {
           const now = new Date();
@@ -561,26 +773,63 @@ export default function PresentationApp() {
           <p className="left-main">
             뺀질라이프
             <br />
-            오래 살아남기 {overlay.dayLabel}
+            오래 살아남기 {challengeDayLabel(focusDateISO)}
           </p>
-          <p className="left-date">{overlay.dateLabel}</p>
+          <p className="left-date">{fmtDateYYMMDD(focusDateISO)}</p>
         </section>
 
+        {photoHistory.length > 0 && (
+          <section className="presentation-overlay top-strip" aria-label="지나간 사진 목록">
+            <div className="presentation-thumb-grid">
+              {photoHistory.map((item) => (
+                <img key={`thumb-${item.id}`} className="presentation-thumb" src={item.photo_url} alt={`${item.date} 사진`} />
+              ))}
+            </div>
+          </section>
+        )}
+
         <section className="presentation-overlay right-top">
-          <p className="balance-main">{fmtWon(overlay.startOfTodayBalance)}</p>
-          <div className="today-list">
-            {visibleItems.map((item) => (
-              <p key={`today-${item.id}`} className="today-item">
-                {item.memo || (item.type === 'expense' ? '지출' : '수입')}: {fmtSignedWon(item.type === 'expense' ? -item.amount : item.amount)}
-              </p>
-            ))}
+          <div className="presentation-metrics">
+            <div className="presentation-summary-block">
+              <p className="balance-main">{fmtWon(presentationData.startBalance)}</p>
+              <div className="presentation-summary-list">
+                {summaryGroups.map((group) => (
+                  <p key={`summary-${group.date}`} className="today-item day-summary">
+                    <span className="day-summary-date">{fmtDateYYMMDD(group.date)}</span>
+                    <span className="day-summary-value">{fmtSignedWon(group.delta)}</span>
+                  </p>
+                ))}
+              </div>
+              {showFinal && (
+                <>
+                  <p className="balance-divider">-----------------------</p>
+                  <p className="balance-main">{fmtWon(presentationData.endBalance)}</p>
+                </>
+              )}
+            </div>
+            <div className="presentation-detail-list">
+              {visibleCurrentItems.map((item) => (
+                <p key={`item-${item.id}`} className="today-item detail-item">
+                  <span className="detail-content">
+                    <span className="detail-meta">
+                      {(item.tags || [])
+                        .map((tag) => String(tag?.name || '').trim())
+                        .filter(Boolean)
+                        .map((tagName) => (
+                          <span key={`${item.id}-${tagName}`} className="detail-tag-pill">
+                            {tagName}
+                          </span>
+                        ))}
+                    </span>
+                    <span className="detail-text">
+                      {item.memo || (item.type === 'expense' ? '지출' : '수입')}
+                    </span>
+                  </span>
+                  <span className="detail-amount">{fmtSignedWon(item.type === 'expense' ? -item.amount : item.amount)}</span>
+                </p>
+              ))}
+            </div>
           </div>
-          {showFinal && (
-            <>
-              <p className="balance-divider">-------------</p>
-              <p className="balance-main">{fmtWon(overlay.endOfTodayBalance)}</p>
-            </>
-          )}
         </section>
 
         {revealState.activePhoto && (
@@ -589,32 +838,14 @@ export default function PresentationApp() {
           </section>
         )}
 
-        <section className="presentation-manip-grid" aria-label="영상 조작 효과 선택">
-          {MANIP_EFFECT_OPTION_ITEMS.map((option) => {
-            const selected = activeManipEffect === option.value;
-            return (
-              <button
-                key={option.value}
-                type="button"
-                className={`presentation-manip-card${selected ? ' active' : ''}`}
-                onClick={() => triggerManipEffect(option.value)}
-                aria-pressed={selected}
-              >
-                <video
-                  ref={(node) => {
-                    previewVideoRefs.current[option.value] = node;
-                  }}
-                  className={`presentation-manip-preview effect-${option.value}`}
-                  playsInline
-                  muted
-                  autoPlay
-                  aria-hidden="true"
-                />
-                <span className="presentation-manip-label">{option.label}</span>
-              </button>
-            );
-          })}
-        </section>
+        {showFinal && (
+          <section className="presentation-overlay left-bottom">
+            <div className="presentation-tag-summary">
+              <TagPieChart title="지출 분류" items={presentationData.tagTotals.expense} emptyLabel="지출 없음" />
+              <TagPieChart title="수입 분류" items={presentationData.tagTotals.income} emptyLabel="수입 없음" />
+            </div>
+          </section>
+        )}
 
         {showSettings && (
           <section className="presentation-settings-modal" onClick={() => setShowSettings(false)}>
@@ -628,18 +859,47 @@ export default function PresentationApp() {
                 ×
               </button>
               <div className="presentation-settings-panel">
-                <div className="presentation-date-row">
+                <div className="presentation-date-range">
                   <label className="presentation-date-field">
-                    해당일
+                    시작일
                     <input
                       type="date"
-                      value={targetDateISO}
-                      onChange={(e) => setTargetDateISO(e.target.value || todayISO)}
+                      value={rangeStartISO}
+                      onChange={(e) => setRangeStartISO(e.target.value || defaultStartISO)}
                       onClick={(e) => openDatePicker(e.currentTarget)}
                       onFocus={(e) => openDatePicker(e.currentTarget)}
                     />
                   </label>
-                  <button type="button" className="presentation-btn ghost presentation-today-btn" onClick={() => setTargetDateISO(todayISO)}>
+                  <label className="presentation-date-field">
+                    종료일
+                    <input
+                      type="date"
+                      value={rangeEndISO}
+                      onChange={(e) => setRangeEndISO(e.target.value || todayISO)}
+                      onClick={(e) => openDatePicker(e.currentTarget)}
+                      onFocus={(e) => openDatePicker(e.currentTarget)}
+                    />
+                  </label>
+                </div>
+                <div className="presentation-date-row">
+                  <button
+                    type="button"
+                    className="presentation-btn ghost"
+                    onClick={() => {
+                      setRangeStartISO(defaultStartISO);
+                      setRangeEndISO(todayISO);
+                    }}
+                  >
+                    최근 7일
+                  </button>
+                  <button
+                    type="button"
+                    className="presentation-btn ghost presentation-today-btn"
+                    onClick={() => {
+                      setRangeStartISO(todayISO);
+                      setRangeEndISO(todayISO);
+                    }}
+                  >
                     오늘로
                   </button>
                 </div>
@@ -672,6 +932,35 @@ export default function PresentationApp() {
                     })}
                   </div>
                 </section>
+                <section className="presentation-effect-picker" aria-label="영상 왜곡 효과 선택">
+                  <p className="presentation-effect-title">영상 왜곡</p>
+                  <div className="presentation-manip-grid">
+                    {MANIP_EFFECT_OPTION_ITEMS.map((option) => {
+                      const selected = activeManipEffect === option.value;
+                      return (
+                        <button
+                          key={option.value}
+                          type="button"
+                          className={`presentation-manip-card${selected ? ' active' : ''}`}
+                          onClick={() => triggerManipEffect(option.value)}
+                          aria-pressed={selected}
+                        >
+                          <video
+                            ref={(node) => {
+                              previewVideoRefs.current[option.value] = node;
+                            }}
+                            className={`presentation-manip-preview effect-${option.value}`}
+                            playsInline
+                            muted
+                            autoPlay
+                            aria-hidden="true"
+                          />
+                          <span className="presentation-manip-label">{option.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </section>
               </div>
             </div>
           </section>
@@ -683,8 +972,16 @@ export default function PresentationApp() {
             {error && <p>데이터 조회 실패</p>}
             {cameraError && <p>카메라 오류: {cameraError}</p>}
             {recordingError && <p>녹화 오류: {recordingError}</p>}
-            {!cameraReady && <button type="button" className="presentation-btn" onClick={initCamera}>카메라 권한 요청</button>}
-            {error && <button type="button" className="presentation-btn ghost" onClick={reload}>데이터 재시도</button>}
+            {!cameraReady && (
+              <button type="button" className="presentation-btn" onClick={initCamera}>
+                카메라 권한 요청
+              </button>
+            )}
+            {error && (
+              <button type="button" className="presentation-btn ghost" onClick={reload}>
+                데이터 재시도
+              </button>
+            )}
           </section>
         )}
       </section>
