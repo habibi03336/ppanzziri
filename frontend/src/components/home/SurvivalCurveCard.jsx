@@ -6,7 +6,7 @@ const Y_AXIS_UP_PAD = 1_000_000;
 const Y_AXIS_DOWN_PAD = 2_500_000;
 
 export default function SurvivalCurveCard({ balanceSeries, start30, startCapital }) {
-  const [range, setRange] = useState('30');
+  const [range, setRange] = useState('all');
   const canvasRef = useRef(null);
   const chartRef = useRef(null);
 
@@ -102,8 +102,8 @@ export default function SurvivalCurveCard({ balanceSeries, start30, startCapital
       <div className="card-header">
         <h2>생존 곡선</h2>
         <div className="segmented">
-          <button type="button" className={`segbtn ${range === '30' ? 'active' : ''}`} onClick={() => setRange('30')}>30일</button>
           <button type="button" className={`segbtn ${range === 'all' ? 'active' : ''}`} onClick={() => setRange('all')}>전체</button>
+          <button type="button" className={`segbtn ${range === '30' ? 'active' : ''}`} onClick={() => setRange('30')}>30일</button>
         </div>
       </div>
       <div className="chart-wrap">

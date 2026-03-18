@@ -3,7 +3,7 @@ import { fmtDateKR } from '../../utils/format.js';
 import ImageCarousel from '../common/ImageCarousel.jsx';
 
 export default function HomeRecordPhotosCard({ photos }) {
-  const list = Array.isArray(photos) ? photos : [];
+  const list = (Array.isArray(photos) ? photos : []).slice(0, 30);
   const [viewer, setViewer] = useState(null);
   const activeItem = viewer ? list[viewer.index] : null;
 
@@ -24,7 +24,13 @@ export default function HomeRecordPhotosCard({ photos }) {
                 setViewer({ index });
               }}
             >
-              <img src={item.photo_url} alt={`${fmtDateKR(item.transaction_date)} 기록 사진`} />
+              <img
+                src={item.photo_url}
+                alt={`${fmtDateKR(item.transaction_date)} 기록 사진`}
+                loading="lazy"
+                decoding="async"
+                fetchPriority="low"
+              />
             </a>
           ))}
         </div>

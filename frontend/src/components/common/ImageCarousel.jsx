@@ -117,6 +117,9 @@ export default function ImageCarousel({
                 className={`shared-carousel-image ${fit === 'cover' ? 'cover' : 'contain'}`}
                 src={src}
                 alt={typeof getAlt === 'function' ? getAlt(activeIndex, idx) : `이미지 ${activeIndex + 1}`}
+                loading={Math.abs(idx - index) <= 1 ? 'eager' : 'lazy'}
+                decoding="async"
+                fetchPriority={Math.abs(idx - index) <= 1 ? 'high' : 'low'}
               />
             </div>
           ))}

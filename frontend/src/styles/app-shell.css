@@ -424,6 +424,19 @@ body.admin-mode {
   pointer-events: none;
 }
 
+.social-links-panel {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  align-self: start;
+  align-content: start;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.72);
+  box-sizing: border-box;
+}
+
 .social-instagram-profiles {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -432,6 +445,14 @@ body.admin-mode {
   height: auto;
   width: 100%;
   justify-items: stretch;
+}
+
+.social-links-title {
+  margin: 0 0 2px;
+  color: var(--brand);
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1.1;
 }
 
 .instagram-profile-link {
@@ -464,6 +485,10 @@ body.admin-mode {
   font-weight: 800;
   font-size: 12px;
   line-height: 1.15;
+}
+
+.social-link-arrow {
+  color: hotpink;
 }
 
 .instagram-profile-desc {
@@ -1441,6 +1466,10 @@ body.admin-mode {
     width: 100%;
   }
 
+  .social-links-panel {
+    align-self: start;
+  }
+
   .daily-hook {
     white-space: nowrap;
     align-items: center;
@@ -1520,9 +1549,20 @@ body.admin-mode {
   }
 
   .social-row {
-    grid-template-columns: 1.55fr 0.9fr;
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      'youtube'
+      'sns';
     gap: 6px;
     align-items: start;
+  }
+
+  .social-youtube {
+    grid-area: youtube;
+  }
+
+  .social-links-panel {
+    grid-area: sns;
   }
 
   .social-row-card {
@@ -1543,6 +1583,7 @@ body.admin-mode {
   }
 
   .social-instagram-profiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     aspect-ratio: auto;
     height: auto;
     overflow: visible;
@@ -1568,12 +1609,22 @@ body.admin-mode {
   }
 
   .instagram-profile-link {
+    position: relative;
     width: 100%;
     min-width: 0;
     min-height: 38px;
-    padding: 6px 8px;
+    padding: 6px 8px 6px 34px;
     gap: 6px;
-    align-items: flex-start;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .instagram-profile-link .social-logo-mark {
+    position: absolute;
+    left: 8px;
+    top: 50%;
+    transform: translateY(-50%);
   }
 
   .instagram-profile-name {
@@ -1581,6 +1632,10 @@ body.admin-mode {
     line-height: 1.1;
     white-space: normal;
     word-break: normal;
+  }
+
+  .instagram-profile-meta {
+    justify-items: center;
   }
 
   .instagram-profile-desc {
