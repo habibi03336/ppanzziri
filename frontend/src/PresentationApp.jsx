@@ -411,6 +411,7 @@ export default function PresentationApp() {
     return items.filter((item) => item.photo_url).map((item) => ({
       id: item.id,
       photo_url: item.photo_url,
+      photo_url_resized: item.photo_url_resized,
       date: item.transaction_date,
     }));
   }, [revealState.activePhoto, summaryGroups, visibleCurrentItems]);
@@ -782,7 +783,7 @@ export default function PresentationApp() {
           <section className="presentation-overlay top-strip" aria-label="지나간 사진 목록">
             <div className="presentation-thumb-grid">
               {photoHistory.map((item) => (
-                <img key={`thumb-${item.id}`} className="presentation-thumb" src={item.photo_url} alt={`${item.date} 사진`} />
+                <img key={`thumb-${item.id}`} className="presentation-thumb" src={item.photo_url_resized} alt={`${item.date} 사진`} />
               ))}
             </div>
           </section>

@@ -25,7 +25,7 @@ export default function HomeRecordPhotosCard({ photos }) {
               }}
             >
               <img
-                src={item.photo_url}
+                src={item.photo_url_resized}
                 alt={`${fmtDateKR(item.transaction_date)} 기록 사진`}
                 loading="lazy"
                 decoding="async"

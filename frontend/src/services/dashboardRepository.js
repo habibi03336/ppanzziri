@@ -48,7 +48,8 @@ function normalizeRecord(raw) {
     transaction_date: raw?.transaction_date,
     amount: Number(raw?.amount ?? 0),
     memo: raw?.memo || '',
-    photo_url: raw?.photo_url || '',
+    photo_url: raw?.photo_url_compressed || raw?.photo_url || '',
+    photo_url_resized: raw?.photo_url_resized || raw?.photo_url || '',
     tags,
     effective_segments: effectiveSegments,
   };

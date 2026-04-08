@@ -89,6 +89,7 @@ export default function useDashboardData(records, certifications, startCapital, 
         memo: record.memo || '',
         tags: (record.tags || []).map((tag) => tag.name).filter(Boolean),
         photo_url: record.photo_url,
+        photo_url_resized: record.photo_url_resized,
       }));
     const groupedRecords = groupByTransactionDate(records).map((group) => ({
       ...group,

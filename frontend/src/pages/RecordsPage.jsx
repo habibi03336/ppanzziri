@@ -87,7 +87,7 @@ export default function RecordsPage({ groupedRecords }) {
                         });
                       }}
                     >
-                      <img src={item.photo_url} alt={`${fmtDateKR(item.transaction_date)} 기록 사진`} />
+                      <img src={item.photo_url_resized} alt={`${fmtDateKR(item.transaction_date)} 기록 사진`} />
                     </a>
                   ))}
                 </div>
