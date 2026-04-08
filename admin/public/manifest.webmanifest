@@ -1,17 +1,17 @@
 {
-  "id": "/admin",
+  "id": "/",
   "name": "PPANZZIRI Admin",
   "short_name": "PP Admin",
-  "start_url": "/admin",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#f2f2f2",
   "theme_color": "#c4002f",
   "icons": [
     {
-      "src": "/assets/favicon.ico",
-      "sizes": "16x16 32x32 48x48 64x64",
-      "type": "image/x-icon",
+      "src": "/assets/favicon.png",
+      "sizes": "any",
+      "type": "image/png",
       "purpose": "any"
     }
   ]
