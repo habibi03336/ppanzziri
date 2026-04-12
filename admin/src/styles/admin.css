@@ -120,8 +120,8 @@
 }
 
 .admin-tab.active {
-  border-color: #c4002f;
-  color: #c4002f;
+  border-color: #6f624c;
+  color: #6f624c;
   background: #fff4f7;
 }
 
@@ -242,8 +242,8 @@
 }
 
 .admin-type-btn.active {
-  border-color: #c4002f;
-  color: #c4002f;
+  border-color: #6f624c;
+  color: #6f624c;
   background: #fff4f7;
 }
 
@@ -285,8 +285,8 @@
 }
 
 .tag-option.active {
-  border-color: #c4002f;
-  color: #c4002f;
+  border-color: #6f624c;
+  color: #6f624c;
   background: #fff5f8;
 }
 
@@ -329,8 +329,8 @@
 }
 
 .admin-btn.primary {
-  border-color: #c4002f;
-  background: #c4002f;
+  border-color: #6f624c;
+  background: #6f624c;
   color: #fff;
   font-weight: 700;
 }

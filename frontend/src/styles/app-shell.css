@@ -1,5 +1,5 @@
 :root {
-  --brand: #c4002f;
+  --brand: #6f624c;
   --bg: #f2f2f2;
   --card: #ffffff;
   --text: #111111;
@@ -220,7 +220,7 @@ body.admin-mode {
 }
 
 .floating-item.active {
-  border-color: rgba(196, 0, 47, 0.4);
+  border-color: rgba(111, 98, 76, 0.4);
   color: var(--brand);
   background: #fff4f7;
 }
@@ -245,7 +245,7 @@ body.admin-mode {
 
 .tab.active {
   color: var(--brand);
-  border-color: rgba(196, 0, 47, 0.3);
+  border-color: rgba(111, 98, 76, 0.3);
 }
 
 .home-grid {
@@ -629,7 +629,7 @@ body.admin-mode {
 
 .segbtn.active {
   color: var(--brand);
-  border-color: rgba(196, 0, 47, 0.3);
+  border-color: rgba(111, 98, 76, 0.3);
   background: #fff5f8;
 }
 
@@ -708,7 +708,7 @@ body.admin-mode {
 
 .daily-hook {
   margin: 0;
-  border: 1px solid rgba(196, 0, 47, 0.2);
+  border: 1px solid rgba(111, 98, 76, 0.2);
   border-radius: 12px;
   background: #fff6f8;
   padding: 12px;
@@ -723,9 +723,9 @@ body.admin-mode {
 }
 
 .daily-hook-days {
-  color: #c4002f;
+  color: #6f624c;
   font-weight: 900;
-  background: rgba(196, 0, 47, 0.12);
+  background: rgba(111, 98, 76, 0.12);
   border-radius: 8px;
   padding: 0 6px;
 }
@@ -736,9 +736,9 @@ body.admin-mode {
 }
 
 .daily-hook-current-day {
-  color: #c4002f;
+  color: #6f624c;
   font-weight: 900;
-  background: rgba(196, 0, 47, 0.12);
+  background: rgba(111, 98, 76, 0.12);
   border-radius: 8px;
   padding: 0 6px;
 }
@@ -747,7 +747,7 @@ body.admin-mode {
   width: 26px;
   height: 26px;
   border-radius: 999px;
-  border: 1px solid rgba(196, 0, 47, 0.35);
+  border: 1px solid rgba(111, 98, 76, 0.35);
   background: #fff;
   color: var(--brand);
   font-weight: 800;

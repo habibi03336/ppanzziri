@@ -769,7 +769,7 @@ export default function PresentationApp() {
             onClick={() => setShowSettings(true)}
             aria-label="설정 열기"
           >
-            <img src={CHARACTER_IMAGE_URL} alt="뺀질이 캐릭터" />
+            <img src={CHARACTER_IMAGE_URL} alt="방향성 찾기 캐릭터" />
           </button>
           <p className="left-main">
             뺀질라이프
