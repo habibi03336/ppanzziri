@@ -11,7 +11,7 @@ import './styles/app-shell.css';
 const EMPTY_DASHBOARD = {
   startCapital: 0,
   records: [],
-  certifications: [],
+  days_to_goal: null,
   social: {
     youtube_embed_url: '',
     instagram_post_url: '',
@@ -47,7 +47,7 @@ export default function App() {
   const [tab, setTab] = useState(() => getTabFromLocation());
   const { data, loading, error, reload } = useDashboardQuery(dashboardRepository);
   const source = data || EMPTY_DASHBOARD;
-  const dashboard = useDashboardData(source.records, source.certifications, source.startCapital, source.social);
+  const dashboard = useDashboardData(source.records, source.startCapital, source.social, source.days_to_goal);
   const handleTabChange = useCallback((nextTab, { push = true } = {}) => {
     const normalized = normalizeTab(nextTab);
     setTab((prev) => {

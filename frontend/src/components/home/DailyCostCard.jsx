@@ -16,30 +16,29 @@ function getCurrentChallengeDay() {
   return Math.max(1, diff);
 }
 
-export default function DailyCostCard({ runwayDays, avg90 }) {
+export default function DailyCostCard({ daysToGoal, avg90 }) {
   const [showInfoModal, setShowInfoModal] = useState(false);
   const currentDay = getCurrentChallengeDay();
   const avg90Label = Number.isFinite(Number(avg90)) ? fmtKRW(Number(avg90)) : '-';
-  const runwayMonths = runwayDays === null ? null : Math.floor(Number(runwayDays) / 30);
 
   return (
     <section className="card">
       <p className="daily-hook">
         <span>
-          {runwayDays === null ? (
+          {daysToGoal === null ? (
             <>
               <span className="daily-hook-line">
-                현재 <span className="daily-hook-current-day">{currentDay}일차</span> 뺀질이 생활 중,
+                현재 <span className="daily-hook-current-day">{currentDay}일차</span> 방향성 찾기 중,
               </span>
               <span className="daily-hook-line">이 속도를 계산하기 위한 데이터가 부족합니다.</span>
             </>
           ) : (
             <>
               <span className="daily-hook-line">
-                현재 <span className="daily-hook-current-day">{currentDay}일차</span> 뺀질이 생활 중,
+                현재 <span className="daily-hook-current-day">{currentDay}일차</span> 방향성 찾기 중,
               </span>
               <span className="daily-hook-line">
-                <span className="daily-hook-days">{runwayMonths}개월 후</span> 뺀질이 생활이 종료됩니다.
+                <span className="daily-hook-days">{daysToGoal}일 후</span> 3000만원 소비 달성 예정.
               </span>
             </>
           )}
@@ -71,7 +70,7 @@ export default function DailyCostCard({ runwayDays, avg90 }) {
               ×
             </button>
             <p className="daily-info-note">
-              <strong className="daily-info-head">현재 자금을 하루 평균 사용금액으로 나누어 산출합니다.</strong>
+              <strong className="daily-info-head">남은 목표 금액을 하루 평균 사용금액으로 나누어 산출합니다.</strong>
               <br />
               <span>
                 - 하루 평균 사용금액은 최근 90일 기준으로

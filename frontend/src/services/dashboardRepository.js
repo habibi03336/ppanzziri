@@ -1,4 +1,4 @@
-import { START_CAPITAL, certifications, records, social } from '../data/mockData.js';
+import { START_CAPITAL, records, social } from '../data/mockData.js';
 
 const ENV_API_BASE_URL = import.meta.env.VITE_DASHBOARD_API_BASE_URL || '/api';
 const USE_MOCK = import.meta.env.VITE_DASHBOARD_USE_MOCK !== 'false';
@@ -55,14 +55,6 @@ function normalizeRecord(raw) {
   };
 }
 
-function normalizeCertification(raw) {
-  return {
-    date: raw?.date,
-    balance: Number(raw?.balance ?? 0),
-    photo_url: raw?.photo_url || '',
-  };
-}
-
 function normalizeSocial(raw) {
   const rawSocial = raw || {};
   return {
@@ -84,19 +76,22 @@ function normalizeDashboardPayload(raw) {
   return {
     startCapital: Number(normalized.startCapital ?? normalized.start_capital ?? START_CAPITAL),
     records: parseArrayLike(normalized.records).map(normalizeRecord),
-    certifications: parseArrayLike(normalized.certifications).map(normalizeCertification),
     social: normalizeSocial(normalized.social),
+    total_expense: Number(normalized.total_expense ?? 0),
+    days_to_goal: normalized.days_to_goal != null ? Number(normalized.days_to_goal) : null,
   };
 }
 
 export function createMockDashboardRepository() {
   return {
     async getDashboard() {
+      const totalExpense = records.filter((r) => r.type === 'expense').reduce((s, r) => s + r.amount, 0);
       return {
         startCapital: START_CAPITAL,
         records,
-        certifications,
         social: normalizeSocial(social),
+        total_expense: totalExpense,
+        days_to_goal: null,
       };
     },
   };

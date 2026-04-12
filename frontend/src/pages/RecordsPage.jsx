@@ -30,22 +30,14 @@ export default function RecordsPage({ groupedRecords }) {
                 <span className="summary-meta">
                   지출 {fmtKRW(group.items.filter((x) => x.type === 'expense').reduce((s, x) => s + x.amount, 0))}
                 </span>
-                <span className="summary-meta">
-                  수입 {fmtKRW(group.items.filter((x) => x.type === 'income').reduce((s, x) => s + x.amount, 0))}
-                </span>
               </div>
               <div className="summary-meta">{group.items.length}건</div>
             </summary>
 
-            <div className="record-balance-row" aria-label="해당 날짜 기준 잔액">
-              <span className="record-balance-label">해당일 기준 잔액</span>
-              <span className="record-balance-value">{fmtKRW(group.balance || 0)}</span>
-            </div>
-
             {group.items.map((item) => (
               <div key={item.id} className="record-row compact">
                 <div className="record-left">
-                  <div className={`badge ${item.type}`}>{item.type === 'expense' ? '지출' : '수입'}</div>
+                  <div className="badge expense">지출</div>
                   <div className="record-inline-text">
                     {(item.tags || []).length > 0 && (
                       <span className="tiny record-tags-inline">
@@ -56,9 +48,8 @@ export default function RecordsPage({ groupedRecords }) {
                   </div>
                 </div>
                 <div className="record-right compact">
-                  <div className={`amount ${item.type}`}>
-                    {item.type === 'expense' ? '-' : '+'}
-                    {fmtKRW(item.amount).replace('₩', '₩ ')}
+                  <div className="amount expense">
+                    -{fmtKRW(item.amount).replace('₩', '₩ ')}
                   </div>
                 </div>
               </div>
