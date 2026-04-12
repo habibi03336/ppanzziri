@@ -209,7 +209,6 @@ export default function AdminApp() {
   const [settingsError, setSettingsError] = useState('');
   const [password, setPassword] = useState(() => readAdminPasswordFromStorage());
   const [records, setRecords] = useState([]);
-  const [certifications, setCertifications] = useState([]);
   const [tags, setTags] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -217,7 +216,6 @@ export default function AdminApp() {
   const [recordSubmitError, setRecordSubmitError] = useState('');
   const [showRecentModal, setShowRecentModal] = useState(false);
   const [isSavingRecord, setIsSavingRecord] = useState(false);
-  const [isSavingCertification, setIsSavingCertification] = useState(false);
   const [isSavingSocial, setIsSavingSocial] = useState(false);
 
   const [recordForm, setRecordForm] = useState(emptyRecordForm);
@@ -225,10 +223,6 @@ export default function AdminApp() {
   const [newTagName, setNewTagName] = useState('');
   const [recordPhotoFile, setRecordPhotoFile] = useState(null);
   const [recordPhotoInputKey, setRecordPhotoInputKey] = useState(0);
-  const [certForm, setCertForm] = useState({ date: new Date().toISOString().slice(0, 10) });
-  const [certPhotoFile, setCertPhotoFile] = useState(null);
-  const [certPhotoInputKey, setCertPhotoInputKey] = useState(0);
-  const [certDeleteDate, setCertDeleteDate] = useState(new Date().toISOString().slice(0, 10));
   const [deleteDate, setDeleteDate] = useState(new Date().toISOString().slice(0, 10));
   const [socialForm, setSocialForm] = useState({
     youtube_embed_url: '',
@@ -236,7 +230,7 @@ export default function AdminApp() {
     instagram_profile_url: 'https://www.instagram.com/ppanzziri/',
     extra_links: [],
   });
-  const isSubmittingAny = isSavingRecord || isSavingCertification || isSavingSocial;
+  const isSubmittingAny = isSavingRecord || isSavingSocial;
 
   const totalAmount = Number(recordForm.amount || 0);
   const segSum = useMemo(() => {
@@ -279,13 +273,6 @@ export default function AdminApp() {
         .sort((a, b) => Number(b.id) - Number(a.id)),
     [records, deleteDate]
   );
-  const certificationsForDeleteDate = useMemo(
-    () =>
-      certifications
-        .filter((cert) => cert.date === certDeleteDate)
-        .sort((a, b) => (a.date < b.date ? 1 : -1)),
-    [certifications, certDeleteDate]
-  );
   const recent24hRecords = useMemo(() => {
     const now = Date.now();
     const dayMs = 24 * 60 * 60 * 1000;
@@ -318,15 +305,13 @@ export default function AdminApp() {
     setLoading(true);
     setError('');
     try {
-      const [nextRecords, nextTags, nextCertifications, nextSocial] = await Promise.all([
+      const [nextRecords, nextTags, nextSocial] = await Promise.all([
         adminRepository.getRecords(),
         adminRepository.getTags(),
-        adminRepository.getCertifications(),
         adminRepository.getSocialLinks(),
       ]);
       setRecords(nextRecords);
       setTags(nextTags || []);
-      setCertifications(nextCertifications || []);
       setSocialForm((prev) => ({
         ...prev,
         youtube_embed_url: String(nextSocial?.youtube_embed_url || ''),
@@ -485,43 +470,6 @@ export default function AdminApp() {
     }
   };
 
-  const submitCertification = async (e) => {
-    e.preventDefault();
-    if (isSavingCertification) return;
-    setNotice('');
-    setError('');
-    if (!certForm.date || !certPhotoFile) {
-      setError('인증 날짜와 사진 파일은 필수입니다.');
-      return;
-    }
-
-    setIsSavingCertification(true);
-    try {
-      await adminRepository.createCertification({ date: certForm.date, photoFile: certPhotoFile }, password);
-      setNotice('인증이 저장되었습니다.');
-      setCertForm({ date: new Date().toISOString().slice(0, 10) });
-      setCertPhotoFile(null);
-      setCertPhotoInputKey((prev) => prev + 1);
-      await loadAll();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '인증 저장 실패');
-    } finally {
-      setIsSavingCertification(false);
-    }
-  };
-
-  const removeCertificationByDate = async () => {
-    setNotice('');
-    setError('');
-    try {
-      await adminRepository.deleteCertificationByDate(certDeleteDate, password);
-      setNotice('선택한 날짜의 인증이 삭제되었습니다.');
-      await loadAll();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '인증 삭제 실패');
-    }
-  };
-
   const removeRecord = async (id) => {
     setNotice('');
     setError('');
@@ -625,14 +573,6 @@ export default function AdminApp() {
           onClick={() => setAdminTab('record-input')}
         >
           기록입력
-        </button>
-        <button
-          type="button"
-          className={`admin-tab ${adminTab === 'cert-input' ? 'active' : ''}`}
-          disabled={isSubmittingAny}
-          onClick={() => setAdminTab('cert-input')}
-        >
-          인증입력
         </button>
         <button
           type="button"
@@ -826,71 +766,6 @@ export default function AdminApp() {
             {recordSubmitError && <p className="admin-inline-error">{recordSubmitError}</p>}
             </fieldset>
           </form>
-          </article>
-        </section>
-      )}
-
-      {adminTab === 'cert-input' && (
-        <section className="admin-grid admin-tab-panel">
-          <article className="admin-card">
-            <h2>인증 업로드</h2>
-            <form className="admin-form" onSubmit={submitCertification}>
-              <fieldset className="admin-fieldset" disabled={isSavingCertification}>
-              <label>
-                인증 날짜
-                <input
-                  className="admin-input"
-                  type="date"
-                  value={certForm.date}
-                  onChange={(e) => setCertForm((prev) => ({ ...prev, date: e.target.value }))}
-                />
-              </label>
-              <label>
-                인증 사진 파일
-                <input
-                  key={certPhotoInputKey}
-                  className="admin-input"
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => setCertPhotoFile(e.target.files?.[0] || null)}
-                />
-              </label>
-              <button type="submit" className="admin-btn primary">
-                {isSavingCertification ? '인증 저장 중...' : '인증 저장'}
-              </button>
-              </fieldset>
-            </form>
-          </article>
-
-          <article className="admin-card">
-            <h2>인증 삭제</h2>
-            <div className="admin-row two">
-              <label>
-                날짜 선택
-                <input
-                  className="admin-input"
-                  type="date"
-                  value={certDeleteDate}
-                  onChange={(e) => setCertDeleteDate(e.target.value)}
-                />
-              </label>
-              <div className="admin-settings-actions">
-                <button type="button" className="admin-btn danger" onClick={removeCertificationByDate}>
-                  선택 날짜 인증 삭제
-                </button>
-              </div>
-            </div>
-            <div className="admin-record-list">
-              {certificationsForDeleteDate.length === 0 && <p>선택한 날짜의 인증이 없습니다.</p>}
-              {certificationsForDeleteDate.map((cert, idx) => (
-                <div key={`${cert.date}-${idx}`} className="admin-record-item">
-                  <div className="admin-record-main">
-                    <strong className="admin-record-date">{fmtDateKRFull(cert.date)}</strong>
-                    <div className="admin-record-meta">{cert.photo_url || '이미지 경로 없음'}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
           </article>
         </section>
       )}

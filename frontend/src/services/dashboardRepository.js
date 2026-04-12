@@ -1,4 +1,4 @@
-import { START_CAPITAL, certifications, records, social } from '../data/mockData.js';
+import { START_CAPITAL, records, social } from '../data/mockData.js';
 
 const ENV_API_BASE_URL = import.meta.env.VITE_DASHBOARD_API_BASE_URL || '/api';
 const USE_MOCK = import.meta.env.VITE_DASHBOARD_USE_MOCK !== 'false';
@@ -55,14 +55,6 @@ function normalizeRecord(raw) {
   };
 }
 
-function normalizeCertification(raw) {
-  return {
-    date: raw?.date,
-    balance: Number(raw?.balance ?? 0),
-    photo_url: raw?.photo_url || '',
-  };
-}
-
 function normalizeSocial(raw) {
   const rawSocial = raw || {};
   return {
@@ -84,7 +76,6 @@ function normalizeDashboardPayload(raw) {
   return {
     startCapital: Number(normalized.startCapital ?? normalized.start_capital ?? START_CAPITAL),
     records: parseArrayLike(normalized.records).map(normalizeRecord),
-    certifications: parseArrayLike(normalized.certifications).map(normalizeCertification),
     social: normalizeSocial(normalized.social),
   };
 }
@@ -95,7 +86,6 @@ export function createMockDashboardRepository() {
       return {
         startCapital: START_CAPITAL,
         records,
-        certifications,
         social: normalizeSocial(social),
       };
     },

@@ -10,7 +10,7 @@ import {
 
 const CHALLENGE_START_DATE = '2026-02-08';
 
-export default function useDashboardData(records, certifications, startCapital, social) {
+export default function useDashboardData(records, startCapital, social) {
   return useMemo(() => {
     const recordsAsc = sortByDateAsc(records, 'transaction_date');
     const totalIncome = recordsAsc.filter((r) => r.type === 'income').reduce((s, r) => s + r.amount, 0);
@@ -95,7 +95,6 @@ export default function useDashboardData(records, certifications, startCapital, 
       ...group,
       balance: balanceAt(group.date),
     }));
-    const latestProof = [...certifications].sort((a, b) => parseDate(b.date) - parseDate(a.date))[0] || null;
 
     return {
       START_CAPITAL: startCapital,
@@ -114,8 +113,6 @@ export default function useDashboardData(records, certifications, startCapital, 
       topTags,
       recordPhotos,
       groupedRecords,
-      latestProof,
-      certifications,
       start30,
       social: social || {
         youtube_embed_url: '',
@@ -124,5 +121,5 @@ export default function useDashboardData(records, certifications, startCapital, 
         extra_links: [],
       },
     };
-  }, [records, certifications, startCapital, social]);
+  }, [records, startCapital, social]);
 }
