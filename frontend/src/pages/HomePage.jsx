@@ -11,11 +11,11 @@ export default function HomePage({ dashboard, onNavigate }) {
     <section className="screen active" id="screen-home">
       <div className="home-grid">
         <div className="area-links"><QuickLinksCard social={dashboard.social} /></div>
-        <div className="area-hero"><HeroBalanceCard currentBalance={dashboard.currentBalance} dayChange={dashboard.dayChange} monthChange={dashboard.monthChange} /></div>
+        <div className="area-hero"><HeroBalanceCard totalExpense={dashboard.totalExpense} /></div>
         <div className="area-hero-photos"><HomeRecordPhotosCard photos={dashboard.recordPhotos} /></div>
-        <div className="area-curve"><SurvivalCurveCard balanceSeries={dashboard.balanceSeries} start30={dashboard.start30} startCapital={dashboard.START_CAPITAL} /></div>
+        <div className="area-curve"><SurvivalCurveCard expenseSeries={dashboard.expenseSeries} start30={dashboard.start30} startCapital={dashboard.START_CAPITAL} /></div>
         <div className="area-tags"><TagUsageCard tagItems={dashboard.tagItems} /></div>
-        <div className="area-daily"><DailyCostCard runwayDays={dashboard.runwayDays} avg90={dashboard.avg90} /></div>
+        <div className="area-daily"><DailyCostCard daysToGoal={dashboard.daysToGoal} avg90={dashboard.avg90} /></div>
         <div className="area-records"><RecentRecordsCard groupedRecords={dashboard.groupedRecords} onGoRecords={() => onNavigate('records')} /></div>
       </div>
     </section>

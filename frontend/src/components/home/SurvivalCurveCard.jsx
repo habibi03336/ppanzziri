@@ -3,27 +3,26 @@ import { fmtDateKR, fmtKRW } from '../../utils/format.js';
 
 const Y_AXIS_STEP = 2_500_000;
 const Y_AXIS_UP_PAD = 1_000_000;
-const Y_AXIS_DOWN_PAD = 2_500_000;
 
-export default function SurvivalCurveCard({ balanceSeries, start30, startCapital }) {
+export default function SurvivalCurveCard({ expenseSeries, start30, startCapital }) {
   const [range, setRange] = useState('all');
   const canvasRef = useRef(null);
   const chartRef = useRef(null);
 
   const sliced = useMemo(() => {
-    if (range === 'all') return balanceSeries;
-    return balanceSeries.filter((p) => p.date >= start30);
-  }, [balanceSeries, range, start30]);
+    if (range === 'all') return expenseSeries;
+    return expenseSeries.filter((p) => p.date >= start30);
+  }, [expenseSeries, range, start30]);
 
-  const values = useMemo(() => sliced.map((p) => Math.round(p.balance)), [sliced]);
-  const min = values.length ? Math.min(...values, startCapital) : startCapital;
-  const max = values.length ? Math.max(...values, startCapital) : startCapital;
+  const values = useMemo(() => sliced.map((p) => Math.round(p.expense)), [sliced]);
+  const max = values.length ? Math.max(...values) : 0;
+  const goalLine = startCapital;
+
   const yBounds = useMemo(() => {
-    const yMin = Math.floor((min - Y_AXIS_DOWN_PAD) / Y_AXIS_STEP) * Y_AXIS_STEP;
-    let yMax = Math.ceil((max + Y_AXIS_UP_PAD) / Y_AXIS_STEP) * Y_AXIS_STEP;
-    if (yMax <= yMin) yMax = yMin + Y_AXIS_STEP;
-    return { yMin, yMax };
-  }, [min, max]);
+    let yMax = Math.ceil((Math.max(max, goalLine) + Y_AXIS_UP_PAD) / Y_AXIS_STEP) * Y_AXIS_STEP;
+    if (yMax <= 0) yMax = Y_AXIS_STEP;
+    return { yMin: 0, yMax };
+  }, [max, goalLine]);
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -31,7 +30,7 @@ export default function SurvivalCurveCard({ balanceSeries, start30, startCapital
     if (chartRef.current) chartRef.current.destroy();
 
     const labels = sliced.map((p) => fmtDateKR(p.date));
-    const baseline = new Array(values.length).fill(startCapital);
+    const goalData = new Array(values.length).fill(goalLine);
 
     chartRef.current = new window.Chart(canvasRef.current, {
       type: 'line',
@@ -39,7 +38,7 @@ export default function SurvivalCurveCard({ balanceSeries, start30, startCapital
         labels,
         datasets: [
           {
-            label: '잔액',
+            label: '누적 지출',
             data: values,
             borderColor: '#111111',
             borderWidth: 2,
@@ -47,8 +46,8 @@ export default function SurvivalCurveCard({ balanceSeries, start30, startCapital
             tension: 0.25,
           },
           {
-            label: '기준선',
-            data: baseline,
+            label: '목표',
+            data: goalData,
             borderColor: '#bdbdbd',
             borderWidth: 1,
             pointRadius: 0,
@@ -95,23 +94,23 @@ export default function SurvivalCurveCard({ balanceSeries, start30, startCapital
         chartRef.current = null;
       }
     };
-  }, [sliced, startCapital, values, yBounds]);
+  }, [sliced, goalLine, values, yBounds]);
 
   return (
     <section className="card card-lg">
       <div className="card-header">
-        <h2>생존 곡선</h2>
+        <h2>경험 곡선</h2>
         <div className="segmented">
           <button type="button" className={`segbtn ${range === 'all' ? 'active' : ''}`} onClick={() => setRange('all')}>전체</button>
           <button type="button" className={`segbtn ${range === '30' ? 'active' : ''}`} onClick={() => setRange('30')}>30일</button>
         </div>
       </div>
       <div className="chart-wrap">
-        <canvas ref={canvasRef} aria-label="잔액 추이 차트" />
+        <canvas ref={canvasRef} aria-label="누적 지출 추이 차트" />
       </div>
       <div className="two-col">
-        <div><p className="eyebrow">최저 잔액</p><p className="kpi">{fmtKRW(min)}</p></div>
-        <div><p className="eyebrow">최고 잔액</p><p className="kpi">{fmtKRW(max)}</p></div>
+        <div><p className="eyebrow">현재 누적 지출</p><p className="kpi">{fmtKRW(max)}</p></div>
+        <div><p className="eyebrow">목표 금액</p><p className="kpi">{fmtKRW(goalLine)}</p></div>
       </div>
     </section>
   );

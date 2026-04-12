@@ -10,45 +10,27 @@ import {
 
 const CHALLENGE_START_DATE = '2026-02-08';
 
-export default function useDashboardData(records, startCapital, social) {
+export default function useDashboardData(records, startCapital, social, apiDaysToGoal) {
   return useMemo(() => {
     const recordsAsc = sortByDateAsc(records, 'transaction_date');
-    const totalIncome = recordsAsc.filter((r) => r.type === 'income').reduce((s, r) => s + r.amount, 0);
     const totalExpense = recordsAsc.filter((r) => r.type === 'expense').reduce((s, r) => s + r.amount, 0);
-    const currentBalance = startCapital + totalIncome - totalExpense;
 
-    const balanceSeries = [];
-    let bal = startCapital;
+    const expenseSeries = [];
+    let cumExp = 0;
     for (const r of recordsAsc) {
-      bal += r.type === 'income' ? r.amount : -r.amount;
-      balanceSeries.push({ date: r.transaction_date, balance: bal });
+      if (r.type === 'expense') {
+        cumExp += r.amount;
+        expenseSeries.push({ date: r.transaction_date, expense: cumExp });
+      }
     }
 
     const asOfDate = toISODate(new Date());
     const asOfObj = parseDate(asOfDate);
-    const yesterday = toISODate(addDays(asOfObj, -1));
-    const monthAgo = toISODate(addDays(asOfObj, -30));
     const start30 = toISODate(addDays(asOfObj, -29));
     const start90 = toISODate(addDays(asOfObj, -89));
     const effectiveStart90 = parseDate(start90) > parseDate(CHALLENGE_START_DATE)
       ? start90
       : CHALLENGE_START_DATE;
-
-    const balanceAt = (targetDate) => {
-      let value = startCapital;
-      for (const r of recordsAsc) {
-        if (r.transaction_date > targetDate) break;
-        value += r.type === 'income' ? r.amount : -r.amount;
-      }
-      return value;
-    };
-
-    const prevDayBalance = balanceAt(yesterday);
-    const prevMonthBalance = balanceAt(monthAgo);
-    const dayDelta = currentBalance - prevDayBalance;
-    const monthDelta = currentBalance - prevMonthBalance;
-    const dayDeltaPct = prevDayBalance !== 0 ? (dayDelta / prevDayBalance) * 100 : null;
-    const monthDeltaPct = prevMonthBalance !== 0 ? (monthDelta / prevMonthBalance) * 100 : null;
 
     const dailyExpenseEff = buildDailyEffectiveMap(records, 'expense');
 
@@ -60,7 +42,11 @@ export default function useDashboardData(records, startCapital, social) {
     const avgAll = averageDailyFromMap(dailyExpenseEff, earliestEffDate, asOfDate);
     const avg30 = averageDailyFromMap(dailyExpenseEff, start30, asOfDate);
     const avg90 = averageDailyFromMap(dailyExpenseEff, effectiveStart90, asOfDate);
-    const runwayDays = avg90 > 0 ? Math.floor(currentBalance / avg90) : null;
+
+    const remaining = Math.max(0, startCapital - totalExpense);
+    const daysToGoal = apiDaysToGoal != null
+      ? apiDaysToGoal
+      : (avg90 > 0 ? Math.floor(remaining / avg90) : null);
 
     const tagTotals = tagTotalsEffectiveLast30(records, start30, asOfDate);
     const tagItems = [...tagTotals.entries()]
@@ -91,24 +77,18 @@ export default function useDashboardData(records, startCapital, social) {
         photo_url: record.photo_url,
         photo_url_resized: record.photo_url_resized,
       }));
-    const groupedRecords = groupByTransactionDate(records).map((group) => ({
-      ...group,
-      balance: balanceAt(group.date),
-    }));
+
+    const groupedRecords = groupByTransactionDate(records);
 
     return {
       START_CAPITAL: startCapital,
       asOfDate,
-      totalIncome,
       totalExpense,
-      currentBalance,
-      dayChange: { amount: dayDelta, pct: dayDeltaPct },
-      monthChange: { amount: monthDelta, pct: monthDeltaPct },
-      balanceSeries,
+      expenseSeries,
+      daysToGoal,
       avgAll,
       avg30,
       avg90,
-      runwayDays,
       tagItems,
       topTags,
       recordPhotos,
@@ -121,5 +101,5 @@ export default function useDashboardData(records, startCapital, social) {
         extra_links: [],
       },
     };
-  }, [records, startCapital, social]);
+  }, [records, startCapital, social, apiDaysToGoal]);
 }

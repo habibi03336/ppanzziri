@@ -613,25 +613,6 @@ export default function AdminApp() {
             <fieldset className="admin-fieldset" disabled={isSavingRecord}>
             <div className="admin-row two">
               <label>
-                유형
-                <div className="admin-type-toggle" role="tablist" aria-label="유형 선택">
-                  <button
-                    type="button"
-                    className={`admin-type-btn ${recordForm.type === 'expense' ? 'active' : ''}`}
-                    onClick={() => setRecordForm((prev) => ({ ...prev, type: 'expense', tags: [] }))}
-                  >
-                    지출
-                  </button>
-                  <button
-                    type="button"
-                    className={`admin-type-btn ${recordForm.type === 'income' ? 'active' : ''}`}
-                    onClick={() => setRecordForm((prev) => ({ ...prev, type: 'income', tags: [] }))}
-                  >
-                    수입
-                  </button>
-                </div>
-              </label>
-              <label>
                 거래일
                 <input
                   className="admin-input"

@@ -77,16 +77,21 @@ function normalizeDashboardPayload(raw) {
     startCapital: Number(normalized.startCapital ?? normalized.start_capital ?? START_CAPITAL),
     records: parseArrayLike(normalized.records).map(normalizeRecord),
     social: normalizeSocial(normalized.social),
+    total_expense: Number(normalized.total_expense ?? 0),
+    days_to_goal: normalized.days_to_goal != null ? Number(normalized.days_to_goal) : null,
   };
 }
 
 export function createMockDashboardRepository() {
   return {
     async getDashboard() {
+      const totalExpense = records.filter((r) => r.type === 'expense').reduce((s, r) => s + r.amount, 0);
       return {
         startCapital: START_CAPITAL,
         records,
         social: normalizeSocial(social),
+        total_expense: totalExpense,
+        days_to_goal: null,
       };
     },
   };
