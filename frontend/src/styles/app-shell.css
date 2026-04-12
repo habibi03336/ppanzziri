@@ -152,6 +152,7 @@ body.admin-mode {
   object-fit: cover;
   display: block;
   border-radius: 999px;
+  filter: sepia(40%) saturate(70%) brightness(0.95);
 }
 
 .floating-avatar-btn::after {
@@ -171,7 +172,7 @@ body.admin-mode {
   width: 100%;
   height: 100%;
   font-size: 28px;
-  background: #fff6f8;
+  background: #f2f2f2;
 }
 
 .floating-ring {
@@ -190,9 +191,9 @@ body.admin-mode {
   width: 52px;
   height: 52px;
   border-radius: 999px;
-  border: 2px solid #222;
+  border: 2px solid var(--border);
   background: #fff;
-  color: #111;
+  color: var(--muted);
   font-weight: 800;
   cursor: pointer;
   opacity: 0;
@@ -220,9 +221,9 @@ body.admin-mode {
 }
 
 .floating-item.active {
-  border-color: rgba(111, 98, 76, 0.4);
-  color: var(--brand);
-  background: #fff4f7;
+  border-color: #111111;
+  color: #ffffff;
+  background: #111111;
 }
 
 .tabbar {
@@ -339,6 +340,18 @@ body.admin-mode {
   flex: 0 0 auto;
 }
 
+.balance-stat {
+  display: inline;
+}
+
+.balance-stat-label {
+  color: var(--muted);
+}
+
+.balance-stat-label::after {
+  content: ' ';
+}
+
 .balance-change {
   display: grid;
   gap: 1px;
@@ -411,6 +424,10 @@ body.admin-mode {
 
 .embed-wrap.post {
   height: 100%;
+}
+
+.social-youtube iframe {
+  filter: saturate(0.3) brightness(0.95);
 }
 
 .embed-wrap iframe {
@@ -488,7 +505,7 @@ body.admin-mode {
 }
 
 .social-link-arrow {
-  color: hotpink;
+  color: #111111;
 }
 
 .instagram-profile-desc {
@@ -628,9 +645,9 @@ body.admin-mode {
 }
 
 .segbtn.active {
-  color: var(--brand);
-  border-color: rgba(111, 98, 76, 0.3);
-  background: #fff5f8;
+  color: #ffffff;
+  border-color: #111111;
+  background: #111111;
 }
 
 .curve {
@@ -710,9 +727,15 @@ body.admin-mode {
   margin: 0;
   border: 1px solid rgba(111, 98, 76, 0.2);
   border-radius: 12px;
-  background: #fff6f8;
+  background: #ffffff;
   padding: 12px;
-  color: #9c0026;
+  color: #111111;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.daily-hook-main {
   font-size: 18px;
   font-weight: 800;
   line-height: 1.35;
@@ -741,6 +764,13 @@ body.admin-mode {
   background: rgba(111, 98, 76, 0.12);
   border-radius: 8px;
   padding: 0 6px;
+}
+
+.daily-context {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.4;
 }
 
 .daily-info-btn {
@@ -1470,7 +1500,7 @@ body.admin-mode {
     align-self: start;
   }
 
-  .daily-hook {
+  .daily-hook-main {
     white-space: nowrap;
     align-items: center;
   }
@@ -1533,6 +1563,34 @@ body.admin-mode {
     justify-self: end;
     gap: 4px;
     text-align: right;
+  }
+
+  .balance-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 1px;
+  }
+
+  .balance-stat-label {
+    font-size: 10px;
+    color: var(--muted);
+    font-weight: 600;
+    line-height: 1.2;
+  }
+
+  .balance-stat-label::after {
+    content: '';
+  }
+
+  .balance-stat-value {
+    font-size: clamp(11px, 3.2vw, 14px);
+    font-weight: 800;
+    line-height: 1.15;
+  }
+
+  .balance-changes .muted {
+    font-size: 10px;
   }
 
   .balance-change {

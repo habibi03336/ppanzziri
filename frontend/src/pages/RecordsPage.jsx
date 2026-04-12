@@ -28,7 +28,7 @@ export default function RecordsPage({ groupedRecords }) {
               <div className="summary-inline">
                 <span className="summary-date">{fmtDateKR(group.date)}</span>
                 <span className="summary-meta">
-                  지출 {fmtKRW(group.items.filter((x) => x.type === 'expense').reduce((s, x) => s + x.amount, 0))}
+                  {fmtKRW(group.items.filter((x) => x.type === 'expense').reduce((s, x) => s + x.amount, 0))}
                 </span>
               </div>
               <div className="summary-meta">{group.items.length}건</div>
@@ -37,7 +37,7 @@ export default function RecordsPage({ groupedRecords }) {
             {group.items.map((item) => (
               <div key={item.id} className="record-row compact">
                 <div className="record-left">
-                  <div className="badge expense">지출</div>
+
                   <div className="record-inline-text">
                     {(item.tags || []).length > 0 && (
                       <span className="tiny record-tags-inline">
@@ -49,7 +49,7 @@ export default function RecordsPage({ groupedRecords }) {
                 </div>
                 <div className="record-right compact">
                   <div className="amount expense">
-                    -{fmtKRW(item.amount).replace('₩', '₩ ')}
+                    {fmtKRW(item.amount).replace('₩', '₩ ')}
                   </div>
                 </div>
               </div>

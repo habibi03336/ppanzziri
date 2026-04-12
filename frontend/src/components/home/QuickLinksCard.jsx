@@ -1,27 +1,17 @@
 const SOCIAL_PROFILES = [
   {
     label: 'Instagram',
-    href: 'https://www.instagram.com/runaway_ppanzziri/',
+    href: 'https://www.instagram.com/ppanzziri_red/',
     brand: 'instagram',
-  },
-  {
-    label: 'TikTok',
-    href: 'https://www.tiktok.com/@ppanzziri',
-    brand: 'tiktok',
   },
   {
     label: 'LinkedIn',
     href: 'https://www.linkedin.com/in/%EC%A7%80%ED%9B%88-%ED%95%98-987891223/',
     brand: 'linkedin',
   },
-  {
-    label: 'Kakao Open Chat',
-    href: 'https://open.kakao.com/o/geX3uZli',
-    brand: 'kakao',
-  },
 ];
 const FIXED_YOUTUBE_EMBED_URL =
-  'https://www.youtube.com/embed/videoseries?si=iqO0lKb1H4b5vhF2&list=PLQL7kfEcNRg1qpdAqRjF6Uumw9MKQh4D8';
+  'https://www.youtube.com/embed/videoseries?si=iqO0lKb1H4b5vhF2&list=PLQL7kfEcNRg1qpdAqRjF6Uumw9MKQh4D8&color=white';
 
 function normalizeExtraLinks(value) {
   if (!Array.isArray(value)) return [];

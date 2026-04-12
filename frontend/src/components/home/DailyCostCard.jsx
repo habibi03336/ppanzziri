@@ -23,35 +23,38 @@ export default function DailyCostCard({ daysToGoal, avg90 }) {
 
   return (
     <section className="card">
-      <p className="daily-hook">
-        <span>
-          {daysToGoal === null ? (
-            <>
-              <span className="daily-hook-line">
-                현재 <span className="daily-hook-current-day">{currentDay}일차</span> 방향성 찾기 중,
-              </span>
-              <span className="daily-hook-line">이 속도를 계산하기 위한 데이터가 부족합니다.</span>
-            </>
-          ) : (
-            <>
-              <span className="daily-hook-line">
-                현재 <span className="daily-hook-current-day">{currentDay}일차</span> 방향성 찾기 중,
-              </span>
-              <span className="daily-hook-line">
-                <span className="daily-hook-days">{daysToGoal}일 후</span> 3000만원 소비 달성 예정.
-              </span>
-            </>
-          )}
-        </span>
-        <button
-          type="button"
-          className="daily-info-btn"
-          aria-label="하루비용 계산 기준 보기"
-          onClick={() => setShowInfoModal(true)}
-        >
-          ?
-        </button>
-      </p>
+      <div className="daily-hook">
+        <div className="daily-hook-main">
+          <span>
+            {daysToGoal === null ? (
+              <>
+                <span className="daily-hook-line">
+                  현재 <span className="daily-hook-current-day">{currentDay}일차</span> 방향성 찾기 중,
+                </span>
+                <span className="daily-hook-line">이 속도를 계산하기 위한 데이터가 부족합니다.</span>
+              </>
+            ) : (
+              <>
+                <span className="daily-hook-line">
+                  현재 <span className="daily-hook-current-day">{currentDay}일차</span> 방향성 찾기 중,
+                </span>
+                <span className="daily-hook-line">
+                  <span className="daily-hook-days">{daysToGoal}일 후</span> 3000만원 소비 달성 예상
+                </span>
+              </>
+            )}
+          </span>
+          <button
+            type="button"
+            className="daily-info-btn"
+            aria-label="하루비용 계산 기준 보기"
+            onClick={() => setShowInfoModal(true)}
+          >
+            ?
+          </button>
+        </div>
+        <p className="daily-context">*나를 위한 선물 <u>3000만원</u>으로 <u>방향성</u> 탐색중</p>
+      </div>
       {showInfoModal && (
         <div
           className="daily-info-modal"

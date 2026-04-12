@@ -40,8 +40,13 @@ export default function useDashboardData(records, startCapital, social, apiDaysT
     }
 
     const avgAll = averageDailyFromMap(dailyExpenseEff, earliestEffDate, asOfDate);
+    const start7 = toISODate(addDays(asOfObj, -6));
+    const avg7 = averageDailyFromMap(dailyExpenseEff, start7, asOfDate);
     const avg30 = averageDailyFromMap(dailyExpenseEff, start30, asOfDate);
     const avg90 = averageDailyFromMap(dailyExpenseEff, effectiveStart90, asOfDate);
+
+    const expense7 = Math.round(avg7 * 7);
+    const expense30 = Math.round(avg30 * 30);
 
     const remaining = Math.max(0, startCapital - totalExpense);
     const daysToGoal = apiDaysToGoal != null
@@ -84,6 +89,8 @@ export default function useDashboardData(records, startCapital, social, apiDaysT
       START_CAPITAL: startCapital,
       asOfDate,
       totalExpense,
+      expense7,
+      expense30,
       expenseSeries,
       daysToGoal,
       avgAll,

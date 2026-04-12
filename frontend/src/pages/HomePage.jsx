@@ -11,7 +11,7 @@ export default function HomePage({ dashboard, onNavigate }) {
     <section className="screen active" id="screen-home">
       <div className="home-grid">
         <div className="area-links"><QuickLinksCard social={dashboard.social} /></div>
-        <div className="area-hero"><HeroBalanceCard totalExpense={dashboard.totalExpense} /></div>
+        <div className="area-hero"><HeroBalanceCard totalExpense={dashboard.totalExpense} expense7={dashboard.expense7} expense30={dashboard.expense30} /></div>
         <div className="area-hero-photos"><HomeRecordPhotosCard photos={dashboard.recordPhotos} /></div>
         <div className="area-curve"><SurvivalCurveCard expenseSeries={dashboard.expenseSeries} start30={dashboard.start30} startCapital={dashboard.START_CAPITAL} /></div>
         <div className="area-tags"><TagUsageCard tagItems={dashboard.tagItems} /></div>
