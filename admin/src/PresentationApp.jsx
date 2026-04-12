@@ -27,7 +27,6 @@ const MANIP_EFFECT_OPTION_ITEMS = EFFECT_OPTIONS.filter((option) => EFFECT_MANIP
 const EMPTY_DASHBOARD = {
   startCapital: 0,
   records: [],
-  certifications: [],
   social: {
     youtube_embed_url: '',
     instagram_post_url: '',

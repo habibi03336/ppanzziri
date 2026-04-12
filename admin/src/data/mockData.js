@@ -125,11 +125,6 @@ export const records = [
   },
 ];
 
-export const certifications = [
-  { date: '2026-02-17', balance: 0, photo_url: '/assets/proof-2026-02-17.svg' },
-  { date: '2026-02-12', balance: 0, photo_url: '/assets/proof-2026-02-12.svg' },
-];
-
 export const social = {
   youtube_embed_url: 'https://www.youtube.com/embed/FelkBPk8wWE?list=PLQL7kfEcNRg0esZ-bj8KiZdW7XedKjFCI',
   instagram_post_url: 'https://www.instagram.com/p/DVANzCZkyjX/?utm_source=ig_web_copy_link&igsh=MzRlODBiNWFlZA==',

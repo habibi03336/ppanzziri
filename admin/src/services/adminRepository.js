@@ -1,4 +1,4 @@
-import { certifications as seedCertifications, records as seedRecords, social as seedSocial } from '../data/mockData.js';
+import { records as seedRecords, social as seedSocial } from '../data/mockData.js';
 
 const API_BASE_URL = import.meta.env.VITE_DASHBOARD_API_BASE_URL || '/api';
 const USE_MOCK = import.meta.env.VITE_DASHBOARD_USE_MOCK !== 'false';
@@ -156,47 +156,6 @@ export function createHttpAdminRepository({ baseUrl = API_BASE_URL, fetcher = fe
       }));
     },
 
-    async createCertification(payload, password) {
-      const hasFile = payload?.photoFile instanceof File;
-      const requestInit = hasFile
-        ? (() => {
-            const form = new FormData();
-            form.append('date', payload.date);
-            form.append('photo', payload.photoFile);
-            const headers = {};
-            if (password) headers['X-Admin-Password'] = password;
-            return {
-              method: 'POST',
-              headers,
-              body: form,
-            };
-          })()
-        : {
-            method: 'POST',
-            headers: buildHeaders(password),
-            body: JSON.stringify(payload),
-          };
-
-      const res = await fetcher(`${baseUrl}/budget/certifications`, requestInit);
-      if (!res.ok) throw new Error(`certification create failed: ${res.status}`);
-      return res.json().catch(() => ({}));
-    },
-
-    async getCertifications() {
-      const res = await fetcher(`${baseUrl}/budget/certifications`);
-      if (!res.ok) throw new Error(`certifications fetch failed: ${res.status}`);
-      return res.json();
-    },
-
-    async deleteCertificationByDate(date, password) {
-      const encodedDate = encodeURIComponent(date);
-      const res = await fetcher(`${baseUrl}/budget/certifications/${encodedDate}`, {
-        method: 'DELETE',
-        headers: buildHeaders(password),
-      });
-      if (!res.ok) throw new Error(`certification delete failed: ${res.status}`);
-    },
-
     async getSocialLinks() {
       const res = await fetcher(`${baseUrl}/social`);
       if (!res.ok) throw new Error(`social fetch failed: ${res.status}`);
@@ -218,7 +177,6 @@ export function createHttpAdminRepository({ baseUrl = API_BASE_URL, fetcher = fe
 
 export function createMockAdminRepository() {
   let records = seedRecords.map((r) => ({ ...r, tags: [...r.tags], effective_segments: [...r.effective_segments] }));
-  let certifications = seedCertifications.map((c) => ({ ...c }));
   let socialLinks = normalizeSocial(seedSocial);
 
   return {
@@ -242,22 +200,6 @@ export function createMockAdminRepository() {
       const map = new Map();
       records.forEach((r) => r.tags.forEach((t) => map.set(t.name, (map.get(t.name) || 0) + t.amount)));
       return [...map.entries()].map(([name, amount]) => ({ name, amount }));
-    },
-
-    async createCertification(payload) {
-      const photoUrl = payload?.photoFile instanceof File
-        ? URL.createObjectURL(payload.photoFile)
-        : payload.photo_url || '';
-      certifications = [{ date: payload.date, photo_url: photoUrl, balance: 0 }, ...certifications];
-      return { ok: true };
-    },
-
-    async getCertifications() {
-      return [...certifications].sort((a, b) => (a.date < b.date ? 1 : -1));
-    },
-
-    async deleteCertificationByDate(date) {
-      certifications = certifications.filter((c) => c.date !== date);
     },
 
     async getSocialLinks() {
