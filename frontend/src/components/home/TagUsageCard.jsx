@@ -1,7 +1,7 @@
 import { fmtKRW } from '../../utils/format.js';
 import { useEffect, useMemo, useState } from 'react';
 
-const COLORS = ['#111111', '#1f3a8a', '#c4002f', '#d48fa3', '#444444'];
+const COLORS = ['#111111', '#1f3a8a', '#6f624c', '#d48fa3', '#444444'];
 
 export default function TagUsageCard({ tagItems }) {
   const [isMediumUp, setIsMediumUp] = useState(() => {

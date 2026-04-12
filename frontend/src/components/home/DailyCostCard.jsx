@@ -29,17 +29,17 @@ export default function DailyCostCard({ runwayDays, avg90 }) {
           {runwayDays === null ? (
             <>
               <span className="daily-hook-line">
-                현재 <span className="daily-hook-current-day">{currentDay}일차</span> 뺀질이 생활 중,
+                현재 <span className="daily-hook-current-day">{currentDay}일차</span> 방향성 찾기 중,
               </span>
               <span className="daily-hook-line">이 속도를 계산하기 위한 데이터가 부족합니다.</span>
             </>
           ) : (
             <>
               <span className="daily-hook-line">
-                현재 <span className="daily-hook-current-day">{currentDay}일차</span> 뺀질이 생활 중,
+                현재 <span className="daily-hook-current-day">{currentDay}일차</span> 방향성 찾기 중,
               </span>
               <span className="daily-hook-line">
-                <span className="daily-hook-days">{runwayMonths}개월 후</span> 뺀질이 생활이 종료됩니다.
+                <span className="daily-hook-days">{runwayMonths}개월 후</span> 방향성 찾기가 종료됩니다.
               </span>
             </>
           )}

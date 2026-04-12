@@ -51,7 +51,7 @@ export default function QuickLinksCard({ social }) {
         </div>
 
         <section className="social-links-panel">
-          <p className="social-links-title">뺀질이 SNS</p>
+          <p className="social-links-title">방향성 찾기 SNS</p>
           <div className="social-instagram-profiles">
             {SOCIAL_PROFILES.map((profile) => (
               <a
