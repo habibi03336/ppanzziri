@@ -29,7 +29,7 @@ export default function TagUsageCard({ tagItems }) {
     <section className="card">
       <div className="card-header">
         <h2>어디에 쓰고 있나</h2>
-        <span className="muted">최근 30일 · 효용기준 · 총합 {fmtKRW(total)}</span>
+        <span className="muted tag-usage-meta">최근 30일 · 효용기준<br className="tag-usage-br" /><span className="tag-usage-dot"> · </span>총합 {fmtKRW(total)}</span>
       </div>
       <div className="bar">
         {visibleItems.map((item, idx) => (

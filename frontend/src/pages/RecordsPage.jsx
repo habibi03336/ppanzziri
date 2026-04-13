@@ -22,7 +22,7 @@ export default function RecordsPage({ groupedRecords }) {
   return (
     <section className="screen active" id="screen-records">
       <div className="stack-page">
-        {groupedRecords.map((group) => (
+        {groupedRecords.filter((group) => group.items.some((x) => x.type === 'expense')).map((group) => (
           <details className="record-day" key={group.date}>
             <summary>
               <div className="summary-inline">
@@ -31,10 +31,10 @@ export default function RecordsPage({ groupedRecords }) {
                   {fmtKRW(group.items.filter((x) => x.type === 'expense').reduce((s, x) => s + x.amount, 0))}
                 </span>
               </div>
-              <div className="summary-meta">{group.items.length}건</div>
+              <div className="summary-meta">{group.items.filter((x) => x.type === 'expense').length}건</div>
             </summary>
 
-            {group.items.map((item) => (
+            {group.items.filter((item) => item.type === 'expense').map((item) => (
               <div key={item.id} className="record-row compact">
                 <div className="record-left">
 

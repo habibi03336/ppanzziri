@@ -10,9 +10,6 @@ const SOCIAL_PROFILES = [
     brand: 'linkedin',
   },
 ];
-const FIXED_YOUTUBE_EMBED_URL =
-  'https://www.youtube.com/embed/videoseries?si=iqO0lKb1H4b5vhF2&list=PLQL7kfEcNRg1qpdAqRjF6Uumw9MKQh4D8&color=white';
-
 function normalizeExtraLinks(value) {
   if (!Array.isArray(value)) return [];
   return value
@@ -29,20 +26,7 @@ export default function QuickLinksCard({ social }) {
   return (
     <section className="card social-row-card">
       <div className="social-row">
-        <div className="embed-wrap video social-youtube">
-          <iframe
-            title="유튜브 영상 시리즈"
-            src={FIXED_YOUTUBE_EMBED_URL}
-            loading="lazy"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            allowFullScreen
-            referrerPolicy="strict-origin-when-cross-origin"
-          />
-        </div>
-
-        <section className="social-links-panel">
-          <p className="social-links-title">방향성 찾기 SNS</p>
-          <div className="social-instagram-profiles">
+        <div className="social-instagram-profiles">
             {SOCIAL_PROFILES.map((profile) => (
               <a
                 key={profile.href}
@@ -111,8 +95,7 @@ export default function QuickLinksCard({ social }) {
                 </span>
               </a>
             ))}
-          </div>
-        </section>
+        </div>
       </div>
 
       {extraLinks.length > 0 && (

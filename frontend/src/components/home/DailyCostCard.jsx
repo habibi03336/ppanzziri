@@ -16,7 +16,7 @@ function getCurrentChallengeDay() {
   return Math.max(1, diff);
 }
 
-export default function DailyCostCard({ daysToGoal, avg90 }) {
+export default function DailyCostCard({ avg90 }) {
   const [showInfoModal, setShowInfoModal] = useState(false);
   const currentDay = getCurrentChallengeDay();
   const avg90Label = Number.isFinite(Number(avg90)) ? fmtKRW(Number(avg90)) : '-';
@@ -26,23 +26,12 @@ export default function DailyCostCard({ daysToGoal, avg90 }) {
       <div className="daily-hook">
         <div className="daily-hook-main">
           <span>
-            {daysToGoal === null ? (
-              <>
-                <span className="daily-hook-line">
-                  현재 <span className="daily-hook-current-day">{currentDay}일차</span> 방향성 찾기 중,
-                </span>
-                <span className="daily-hook-line">이 속도를 계산하기 위한 데이터가 부족합니다.</span>
-              </>
-            ) : (
-              <>
-                <span className="daily-hook-line">
-                  현재 <span className="daily-hook-current-day">{currentDay}일차</span> 방향성 찾기 중,
-                </span>
-                <span className="daily-hook-line">
-                  <span className="daily-hook-days">{daysToGoal}일 후</span> 3000만원 소비 달성 예상
-                </span>
-              </>
-            )}
+            <span className="daily-hook-line">
+              현재 방향성 찾기 <span className="daily-hook-current-day">{currentDay}일차</span>,
+            </span>
+            <span className="daily-hook-line">
+              하루 평균 <span className="daily-hook-days">{avg90Label}</span> 소비 중
+            </span>
           </span>
           <button
             type="button"
@@ -53,7 +42,6 @@ export default function DailyCostCard({ daysToGoal, avg90 }) {
             ?
           </button>
         </div>
-        <p className="daily-context">*나를 위한 선물 <u>3000만원</u>으로 <u>방향성</u> 탐색중</p>
       </div>
       {showInfoModal && (
         <div
@@ -73,10 +61,10 @@ export default function DailyCostCard({ daysToGoal, avg90 }) {
               ×
             </button>
             <p className="daily-info-note">
-              <strong className="daily-info-head">남은 목표 금액을 하루 평균 사용금액으로 나누어 산출합니다.</strong>
+              <strong className="daily-info-head">최근 90일간 총 소비 금액을 소비 일수로 나누어 산출합니다.</strong>
               <br />
               <span>
-                - 하루 평균 사용금액은 최근 90일 기준으로
+                - 현재 하루 평균
                 <strong className="daily-info-value"> {avg90Label}</strong>
                 입니다.
               </span>

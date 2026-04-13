@@ -5,7 +5,7 @@ export default function HeroBalanceCard({ totalExpense, expense7, expense30 }) {
     <section className="card">
       <div className="balance-row">
         <div>
-          <p className="eyebrow">지금까지 경험한 금액</p>
+          <p className="eyebrow">지금까지 소비한 금액 <span className="date-badge">2026.02.08 ~</span></p>
           <p className="balance">{fmtKRW(totalExpense)}</p>
         </div>
         <div className="balance-changes">
@@ -17,7 +17,7 @@ export default function HeroBalanceCard({ totalExpense, expense7, expense30 }) {
             <span className="balance-stat-label">한달 동안</span>
             <span className="balance-stat-value">{fmtKRW(expense30)}</span>
           </div>
-          <p className="muted">경험했습니다.</p>
+          <p className="muted">소비했습니다.</p>
         </div>
       </div>
     </section>

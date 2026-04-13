@@ -22,12 +22,12 @@ export default function RecentRecordsCard({ groupedRecords, onGoRecords }) {
   return (
     <section className="card action-card">
       <div className="card-header">
-        <h2>최근 지출</h2>
+        <h2>최근 소비</h2>
       </div>
       <div className="recent-day-list">
         {top3Days.length === 0 && (
           <div className="recent-day-row">
-            <span className="recent-col memo">표시할 최근 지출 기록이 없습니다.</span>
+            <span className="recent-col memo">표시할 최근 소비 기록이 없습니다.</span>
           </div>
         )}
         {top3Days.map((day) => (

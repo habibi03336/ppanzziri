@@ -259,8 +259,8 @@ body.admin-mode {
     'heroPhotos'
     'links'
     'curve'
-    'tags'
     'records'
+    'tags'
     'proof';
 }
 
@@ -308,6 +308,10 @@ body.admin-mode {
   align-items: baseline;
 }
 
+.tag-usage-br {
+  display: none;
+}
+
 .card-header h2 {
   margin: 0;
   font-size: 22px;
@@ -317,6 +321,24 @@ body.admin-mode {
 .muted {
   margin: 0;
   color: var(--muted);
+}
+
+.eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.date-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--muted);
+  background: rgba(0, 0, 0, 0.06);
+  border-radius: 20px;
+  padding: 2px 7px;
+  letter-spacing: 0.2px;
 }
 
 .balance {
@@ -341,15 +363,27 @@ body.admin-mode {
 }
 
 .balance-stat {
-  display: inline;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
 }
 
 .balance-stat-label {
+  font-size: 10px;
   color: var(--muted);
+  font-weight: 600;
+  line-height: 1.2;
 }
 
 .balance-stat-label::after {
-  content: ' ';
+  content: '';
+}
+
+.balance-stat-value {
+  font-size: clamp(11px, 3.2vw, 14px);
+  font-weight: 800;
+  line-height: 1.15;
 }
 
 .balance-change {
@@ -1455,8 +1489,8 @@ body.admin-mode {
       'hero hero'
       'heroPhotos heroPhotos'
       'links links'
-      'curve tags'
-      'records proof';
+      'curve records'
+      'tags proof';
   }
 }
 
@@ -1471,16 +1505,32 @@ body.admin-mode {
   }
 
   .balance-row {
-    justify-content: flex-start;
+    justify-content: space-between;
     gap: clamp(18px, 4vw, 56px);
   }
 
   .balance-changes {
-    text-align: left;
+    text-align: right;
+    align-items: flex-end;
+  }
+
+  .balance-stat-label {
+    font-size: 12px;
+  }
+
+  .balance-stat-value {
+    font-size: clamp(14px, 2vw, 20px);
+  }
+
+  .balance-changes .muted {
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.2;
   }
 
   .social-row {
-    align-items: stretch;
+    align-items: center;
+    justify-content: flex-start;
   }
 
   .embed-wrap.post {
@@ -1493,7 +1543,13 @@ body.admin-mode {
     align-content: start;
     justify-content: start;
     height: auto;
-    width: 100%;
+    width: auto;
+    grid-template-columns: repeat(2, minmax(120px, 180px));
+  }
+
+  .instagram-profile-link {
+    min-height: 36px;
+    font-size: 11px;
   }
 
   .social-links-panel {
@@ -1541,8 +1597,8 @@ body.admin-mode {
       'heroPhotos'
       'links'
       'curve'
-      'tags'
       'records'
+      'tags'
       'proof';
   }
 
@@ -1660,10 +1716,22 @@ body.admin-mode {
     line-height: 1.1;
   }
 
+  .area-tags .card-header {
+    align-items: flex-start;
+  }
+
   .area-tags .card-header .muted {
     font-size: 11px;
-    line-height: 1.1;
-    white-space: nowrap;
+    line-height: 1.4;
+    text-align: right;
+  }
+
+  .tag-usage-br {
+    display: block;
+  }
+
+  .tag-usage-dot {
+    display: none;
   }
 
   .instagram-profile-link {
