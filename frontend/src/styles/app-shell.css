@@ -327,6 +327,7 @@ body.admin-mode {
   display: flex;
   align-items: center;
   gap: 6px;
+  flex-wrap: wrap;
 }
 
 .date-badge {
@@ -339,6 +340,7 @@ body.admin-mode {
   border-radius: 20px;
   padding: 2px 7px;
   letter-spacing: 0.2px;
+  white-space: nowrap;
 }
 
 .balance {
@@ -1585,6 +1587,15 @@ body.admin-mode {
     font-size: 14px;
   }
 
+  .eyebrow {
+    font-size: 10px;
+  }
+
+  .date-badge {
+    font-size: 8px;
+    padding: 1px 5px;
+  }
+
   .topbar-heading {
     align-items: center;
   }
@@ -1647,6 +1658,7 @@ body.admin-mode {
 
   .balance-changes .muted {
     font-size: 10px;
+    font-weight: 600;
   }
 
   .balance-change {
