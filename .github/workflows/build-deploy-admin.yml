@@ -28,6 +28,7 @@ jobs:
         with:
           envkey_VITE_DASHBOARD_USE_MOCK: false
           envkey_VITE_DASHBOARD_API_BASE_URL: ${{ vars.DASHBOARD_API_BASE_URL }}
+          envkey_VITE_VAPID_PUBLIC_KEY: ${{ vars.VITE_VAPID_PUBLIC_KEY }}
           directory: ./admin
           file_name: .env
           fail_on_empty: true
