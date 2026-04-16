@@ -172,12 +172,45 @@ export function createHttpAdminRepository({ baseUrl = API_BASE_URL, fetcher = fe
       if (!res.ok) throw new Error(`social update failed: ${res.status}`);
       return res.json().catch(() => ({}));
     },
+
+    async savePushSubscription(subscription, password) {
+      const res = await fetcher(`${baseUrl}/writing/push-subscription`, {
+        method: 'POST',
+        headers: buildHeaders(password),
+        body: JSON.stringify(subscription),
+      });
+      if (!res.ok) throw new Error(`push subscription failed: ${res.status}`);
+      return res.json().catch(() => ({}));
+    },
+
+    async getWritingGoal() {
+      const res = await fetcher(`${baseUrl}/writing/goal`);
+      if (!res.ok) throw new Error(`writing goal fetch failed: ${res.status}`);
+      const json = await res.json().catch(() => ({}));
+      const raw = json?.goal;
+      const num = Number(raw);
+      return { goal: Number.isFinite(num) && num > 0 ? num : null };
+    },
+
+    async updateWritingGoal(goal, password) {
+      const num = Number(goal);
+      const payload = { goal: Number.isFinite(num) && num > 0 ? num : null };
+      const res = await fetcher(`${baseUrl}/writing/goal`, {
+        method: 'PUT',
+        headers: buildHeaders(password),
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error(`writing goal update failed: ${res.status}`);
+      return res.json().catch(() => ({}));
+    },
   };
 }
 
 export function createMockAdminRepository() {
   let records = seedRecords.map((r) => ({ ...r, tags: [...r.tags], effective_segments: [...r.effective_segments] }));
   let socialLinks = normalizeSocial(seedSocial);
+  let writingGoal = null;
+  let pushSubscriptions = [];
 
   return {
     async getRecords() {
@@ -209,6 +242,21 @@ export function createMockAdminRepository() {
     async updateSocialLinks(payload) {
       socialLinks = normalizeSocial(payload);
       return { ok: true };
+    },
+
+    async savePushSubscription(subscription) {
+      pushSubscriptions = [...pushSubscriptions, subscription];
+      return { ok: true };
+    },
+
+    async getWritingGoal() {
+      return { goal: writingGoal };
+    },
+
+    async updateWritingGoal(goal) {
+      const num = Number(goal);
+      writingGoal = Number.isFinite(num) && num > 0 ? num : null;
+      return { goal: writingGoal };
     },
   };
 }

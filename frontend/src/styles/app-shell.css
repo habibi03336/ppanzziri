@@ -216,6 +216,10 @@ body.admin-mode {
   transform: translate(-62px, -62px) scale(1);
 }
 
+.floating-item:nth-child(3) {
+  transform: translate(0, -88px) scale(1);
+}
+
 .floating-menu:not(.open) .floating-item {
   transform: translate(0, 0) scale(0.75);
 }
@@ -1057,6 +1061,186 @@ body.admin-mode {
 #screen-records .stack-page {
   max-width: 860px;
   margin: 0 auto;
+}
+
+#screen-writing .stack-page {
+  max-width: 860px;
+  margin: 0 auto;
+}
+
+.writing-calendar-card {
+  overflow-x: auto;
+}
+
+.writing-calendar-wrap {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.writing-calendar-month-row {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  font-size: 10px;
+  color: var(--muted);
+  min-height: 14px;
+  padding-left: 2px;
+  overflow: hidden;
+}
+
+.writing-calendar-month-label {
+  grid-row: 1;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.writing-calendar-grid {
+  display: grid;
+  gap: 3px;
+  min-width: 560px;
+}
+
+.writing-calendar-week {
+  display: grid;
+  grid-template-rows: repeat(7, 1fr);
+  gap: 3px;
+}
+
+.writing-calendar-cell {
+  width: 100%;
+  aspect-ratio: 1;
+  border: 0;
+  border-radius: 3px;
+  padding: 0;
+  cursor: pointer;
+  background: #ebedf0;
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+
+.writing-calendar-cell.empty {
+  cursor: default;
+  background: transparent;
+}
+
+.writing-calendar-cell.future {
+  cursor: default;
+  opacity: 0.4;
+}
+
+.writing-calendar-cell:hover:not(.empty):not(.future) {
+  transform: scale(1.2);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25);
+}
+
+.writing-calendar-cell.selected {
+  box-shadow: 0 0 0 2px var(--brand);
+}
+
+.writing-calendar-legend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  font-size: 10px;
+  color: var(--muted);
+  align-self: flex-end;
+}
+
+.writing-calendar-legend-cell {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  display: inline-block;
+}
+
+.writing-calendar-legend-label {
+  font-weight: 600;
+}
+
+.writing-kw-section {
+  margin-top: 14px;
+}
+
+.writing-kw-section:first-of-type {
+  margin-top: 10px;
+}
+
+.writing-kw-list {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.writing-kw-row {
+  display: grid;
+  grid-template-columns: 22px minmax(60px, 1fr) minmax(40px, 1.4fr) auto;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.writing-kw-rank {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.writing-kw-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.writing-kw-bar-wrap {
+  background: #f1f1f1;
+  border-radius: 999px;
+  height: 8px;
+  overflow: hidden;
+}
+
+.writing-kw-bar {
+  height: 100%;
+  background: var(--brand);
+  border-radius: 999px;
+}
+
+.writing-kw-count {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 700;
+  min-width: 36px;
+  text-align: right;
+}
+
+.writing-kw-range {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.writing-kw-range-sep {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.writing-date-input {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  padding: 6px 8px;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--text);
+  min-width: 130px;
 }
 
 .record-day {

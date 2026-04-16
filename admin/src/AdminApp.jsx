@@ -182,6 +182,17 @@ function sanitizeExtraLinks(input) {
     .filter((link) => link.label && link.href && isHttpsUrl(link.href));
 }
 
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; i += 1) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
+
 function parseCreatedAt(value) {
   const raw = String(value || '').trim();
   if (!raw) return null;
@@ -217,6 +228,14 @@ export default function AdminApp() {
   const [showRecentModal, setShowRecentModal] = useState(false);
   const [isSavingRecord, setIsSavingRecord] = useState(false);
   const [isSavingSocial, setIsSavingSocial] = useState(false);
+
+  const [notifPermission, setNotifPermission] = useState(() =>
+    typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'unsupported'
+  );
+  const [pushSubscribed, setPushSubscribed] = useState(false);
+  const [isTogglingPush, setIsTogglingPush] = useState(false);
+  const [writingGoalDraft, setWritingGoalDraft] = useState('');
+  const [isSavingGoal, setIsSavingGoal] = useState(false);
 
   const [recordForm, setRecordForm] = useState(emptyRecordForm);
   const [useCustomEffectiveSegments, setUseCustomEffectiveSegments] = useState(false);
@@ -352,6 +371,102 @@ export default function AdminApp() {
     setPassword('');
     setPasswordDraft('');
     setSettingsNotice('비밀번호가 초기화되었습니다.');
+  };
+
+  useEffect(() => {
+    if (!showSettings) return;
+    let cancelled = false;
+    adminRepository
+      .getWritingGoal()
+      .then((data) => {
+        if (cancelled) return;
+        const value = data?.goal;
+        setWritingGoalDraft(value == null ? '' : String(value));
+      })
+      .catch(() => {});
+
+    if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+      navigator.serviceWorker.ready
+        .then((reg) => reg.pushManager.getSubscription())
+        .then((sub) => {
+          if (!cancelled) setPushSubscribed(!!sub);
+        })
+        .catch(() => {});
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [showSettings]);
+
+  const requestNotifPermission = async () => {
+    if (typeof window === 'undefined' || !('Notification' in window)) return;
+    setSettingsNotice('');
+    setSettingsError('');
+    try {
+      const result = await Notification.requestPermission();
+      setNotifPermission(result);
+      if (result === 'granted') {
+        setSettingsNotice('알림 권한이 허용되었습니다.');
+      } else if (result === 'denied') {
+        setSettingsError('알림 권한이 거부되었습니다. 브라우저 설정에서 변경할 수 있습니다.');
+      }
+    } catch (err) {
+      setSettingsError(err instanceof Error ? err.message : '알림 권한 요청 실패');
+    }
+  };
+
+  const togglePushSubscription = async () => {
+    if (isTogglingPush) return;
+    setSettingsNotice('');
+    setSettingsError('');
+    if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) {
+      setSettingsError('이 브라우저는 푸시 알림을 지원하지 않습니다.');
+      return;
+    }
+    setIsTogglingPush(true);
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const existing = await reg.pushManager.getSubscription();
+      if (existing) {
+        await existing.unsubscribe();
+        setPushSubscribed(false);
+        setSettingsNotice('푸시 알림 구독이 해제되었습니다.');
+      } else {
+        const vapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
+        if (!vapidKey) throw new Error('VAPID 공개 키가 설정되지 않았습니다.');
+        const sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(vapidKey),
+        });
+        await adminRepository.savePushSubscription(sub.toJSON(), password);
+        setPushSubscribed(true);
+        setSettingsNotice('푸시 알림 구독이 등록되었습니다.');
+      }
+    } catch (err) {
+      setSettingsError(err instanceof Error ? err.message : '구독 처리 중 오류가 발생했습니다.');
+    } finally {
+      setIsTogglingPush(false);
+    }
+  };
+
+  const saveWritingGoal = async () => {
+    if (isSavingGoal) return;
+    setSettingsNotice('');
+    setSettingsError('');
+    const trimmed = String(writingGoalDraft || '').trim();
+    if (trimmed && !(Number(trimmed) > 0)) {
+      setSettingsError('목표 글자 수는 0보다 큰 정수여야 합니다.');
+      return;
+    }
+    setIsSavingGoal(true);
+    try {
+      await adminRepository.updateWritingGoal(trimmed ? Number(trimmed) : null, password);
+      setSettingsNotice('목표 글자 수가 저장되었습니다.');
+    } catch (err) {
+      setSettingsError(err instanceof Error ? err.message : '목표 글자 수 저장 실패');
+    } finally {
+      setIsSavingGoal(false);
+    }
   };
 
   const updateSegment = (idx, key, value) => {
@@ -560,6 +675,71 @@ export default function AdminApp() {
               <button type="button" className="admin-btn danger" onClick={clearPasswordSetting}>초기화</button>
             </div>
           </div>
+
+          <section className="admin-section">
+            <h3>푸시 알림</h3>
+            {notifPermission === 'unsupported' && (
+              <p className="admin-settings-message">이 브라우저는 알림을 지원하지 않습니다.</p>
+            )}
+            {notifPermission !== 'unsupported' && notifPermission !== 'granted' && (
+              <div className="admin-row two">
+                <span className="admin-settings-message">
+                  알림 권한: {notifPermission === 'denied' ? '거부됨' : '미설정'}
+                </span>
+                <button
+                  type="button"
+                  className="admin-btn primary"
+                  disabled={notifPermission === 'denied'}
+                  onClick={requestNotifPermission}
+                >
+                  알림 권한 요청
+                </button>
+              </div>
+            )}
+            {notifPermission === 'granted' && (
+              <div className="admin-row two">
+                <span className="admin-settings-message success">
+                  알림 권한: 허용됨 / 구독 {pushSubscribed ? '등록됨' : '미등록'}
+                </span>
+                <button
+                  type="button"
+                  className={`admin-btn ${pushSubscribed ? 'danger' : 'primary'}`}
+                  disabled={isTogglingPush}
+                  onClick={togglePushSubscription}
+                >
+                  {isTogglingPush ? '처리 중...' : pushSubscribed ? '구독 해제' : '구독 등록'}
+                </button>
+              </div>
+            )}
+          </section>
+
+          <section className="admin-section">
+            <h3>글쓰기 목표</h3>
+            <div className="admin-row two">
+              <label>
+                목표 글자 수
+                <input
+                  className="admin-input"
+                  type="number"
+                  min="0"
+                  value={writingGoalDraft}
+                  onChange={(e) => setWritingGoalDraft(e.target.value)}
+                  placeholder="미설정 (기본값 사용)"
+                />
+              </label>
+              <div className="admin-settings-actions">
+                <button
+                  type="button"
+                  className="admin-btn primary"
+                  disabled={isSavingGoal}
+                  onClick={saveWritingGoal}
+                >
+                  {isSavingGoal ? '저장 중...' : '저장'}
+                </button>
+              </div>
+            </div>
+          </section>
+
           {settingsError && <p className="admin-settings-message error">{settingsError}</p>}
           {settingsNotice && <p className="admin-settings-message success">{settingsNotice}</p>}
         </section>
