@@ -1,12 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import useDashboardQuery from '../hooks/useDashboardQuery.js';
-import useWritingDashboardData from '../hooks/useWritingDashboardData.js';
 import { writingDashboardRepository } from '../services/writingDashboardRepository.js';
-
-const CHART_METRIC_OPTIONS = [
-  { key: 'char_count', label: '글자 수' },
-  { key: 'submission_count', label: '제출 횟수' },
-];
 
 const HEATMAP_COLORS = [
   '#ebedf0',
@@ -24,40 +18,6 @@ function getHeatmapLevel(charCount) {
   return 4;
 }
 
-function buildCalendarWeeks(daily, todayStr) {
-  const dayMap = new Map(daily.map((d) => [d.date, d]));
-
-  const today = new Date(todayStr);
-  const endDate = new Date(today);
-  const startDate = new Date(today);
-  startDate.setDate(startDate.getDate() - 364);
-  // align start to Sunday
-  startDate.setDate(startDate.getDate() - startDate.getDay());
-
-  const weeks = [];
-  let week = [];
-  const cur = new Date(startDate);
-
-  while (cur <= endDate) {
-    const dateStr = cur.toISOString().slice(0, 10);
-    const entry = dayMap.get(dateStr) || null;
-    week.push({ date: dateStr, entry, isFuture: dateStr > todayStr });
-    if (week.length === 7) {
-      weeks.push(week);
-      week = [];
-    }
-    cur.setDate(cur.getDate() + 1);
-  }
-  if (week.length) {
-    while (week.length < 7) {
-      week.push(null);
-    }
-    weeks.push(week);
-  }
-
-  return weeks;
-}
-
 function fmtDateShort(dateStr) {
   if (!dateStr) return '';
   const [, m, d] = dateStr.split('-');
@@ -68,22 +28,73 @@ function fmtNumber(n) {
   return n.toLocaleString('ko-KR');
 }
 
-function WritingCalendar({ daily, todayStr, selectedDate, onSelectDate }) {
+function parseMinutes(startTime, endTime) {
+  if (!startTime || !endTime) return 0;
+  const [sh, sm] = startTime.split(':').map(Number);
+  const [eh, em] = endTime.split(':').map(Number);
+  const diff = (eh * 60 + em) - (sh * 60 + sm);
+  return diff > 0 ? diff : 0;
+}
+
+function fmtDuration(minutes) {
+  if (minutes <= 0) return '-';
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (h === 0) return `${m}분`;
+  if (m === 0) return `${h}시간`;
+  return `${h}시간 ${m}분`;
+}
+
+// --- Calendar (no scroll, fit in view) ---
+function buildCalendarWeeks(daily, todayStr) {
+  const dayMap = new Map(daily.map((d) => [d.date, d]));
+  const today = new Date(todayStr);
+  const startDate = new Date(today);
+  startDate.setDate(startDate.getDate() - 364);
+  startDate.setDate(startDate.getDate() - startDate.getDay());
+
+  const weeks = [];
+  let week = [];
+  const cur = new Date(startDate);
+
+  while (cur <= today) {
+    const dateStr = cur.toISOString().slice(0, 10);
+    const entry = dayMap.get(dateStr) || null;
+    week.push({ date: dateStr, entry, isFuture: dateStr > todayStr });
+    if (week.length === 7) {
+      weeks.push(week);
+      week = [];
+    }
+    cur.setDate(cur.getDate() + 1);
+  }
+  if (week.length) {
+    while (week.length < 7) week.push(null);
+    weeks.push(week);
+  }
+  return weeks;
+}
+
+function WritingCalendar({ daily, todayStr }) {
   const weeks = buildCalendarWeeks(daily, todayStr);
 
   const monthLabels = [];
+  const seenMonths = new Set();
   weeks.forEach((week, wi) => {
-    const firstDay = week.find((d) => d !== null);
-    if (!firstDay) return;
-    const [, m, dd] = firstDay.date.split('-');
-    if (dd === '01' || (wi === 0 && Number(dd) <= 7)) {
-      monthLabels.push({ weekIndex: wi, label: `${Number(m)}월` });
+    for (const cell of week) {
+      if (!cell) continue;
+      const [, m, dd] = cell.date.split('-');
+      const monthKey = cell.date.slice(0, 7);
+      if (!seenMonths.has(monthKey) && (dd === '01' || Number(dd) <= 7)) {
+        seenMonths.add(monthKey);
+        monthLabels.push({ weekIndex: wi, label: `${Number(m)}월` });
+        break;
+      }
     }
   });
 
   return (
-    <div className="writing-calendar-wrap">
-      <div className="writing-calendar-month-row">
+    <div className="writing-calendar-wrap compact">
+      <div className="writing-calendar-month-row" style={{ gridTemplateColumns: `repeat(${weeks.length}, 1fr)` }}>
         {monthLabels.map(({ weekIndex, label }) => (
           <span
             key={`${weekIndex}-${label}`}
@@ -100,16 +111,12 @@ function WritingCalendar({ daily, todayStr, selectedDate, onSelectDate }) {
             {week.map((cell, di) => {
               if (!cell) return <div key={di} className="writing-calendar-cell empty" />;
               const level = cell.entry ? getHeatmapLevel(cell.entry.char_count) : 0;
-              const isSelected = cell.date === selectedDate;
               return (
-                <button
+                <div
                   key={di}
-                  type="button"
-                  className={`writing-calendar-cell${isSelected ? ' selected' : ''}${cell.isFuture ? ' future' : ''}`}
+                  className={`writing-calendar-cell${cell.isFuture ? ' future' : ''}`}
                   style={{ background: cell.isFuture ? '#ebedf0' : HEATMAP_COLORS[level] }}
                   title={cell.entry ? `${fmtDateShort(cell.date)}: ${fmtNumber(cell.entry.char_count)}자` : fmtDateShort(cell.date)}
-                  onClick={() => !cell.isFuture && onSelectDate(cell.date === selectedDate ? null : cell.date)}
-                  aria-label={`${fmtDateShort(cell.date)}${cell.entry ? ` ${fmtNumber(cell.entry.char_count)}자` : ' 없음'}`}
                 />
               );
             })}
@@ -127,196 +134,160 @@ function WritingCalendar({ daily, todayStr, selectedDate, onSelectDate }) {
   );
 }
 
-function WritingChart({ daily, todayStr }) {
-  const [metric, setMetric] = useState('char_count');
-  const canvasRef = useRef(null);
-  const chartRef = useRef(null);
-
-  useEffect(() => {
-    if (!canvasRef.current) return;
-    if (typeof window.Chart !== 'function') return;
-    if (chartRef.current) chartRef.current.destroy();
-
-    const start30Date = new Date(todayStr);
-    start30Date.setDate(start30Date.getDate() - 29);
-    const start30Str = start30Date.toISOString().slice(0, 10);
-
-    const slice = daily.filter((d) => d.date >= start30Str && d.date <= todayStr);
-    const labels = slice.map((d) => {
-      const [, m, dd] = d.date.split('-');
-      return `${Number(m)}/${Number(dd)}`;
-    });
-    const data = slice.map((d) => d[metric]);
-    const isChar = metric === 'char_count';
-
-    chartRef.current = new window.Chart(canvasRef.current, {
-      type: 'bar',
-      data: {
-        labels,
-        datasets: [
-          {
-            label: isChar ? '글자 수' : '제출 횟수',
-            data,
-            backgroundColor: 'rgba(111, 98, 76, 0.7)',
-            borderRadius: 4,
-            borderSkipped: false,
-          },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            callbacks: {
-              label: (ctx) => `${ctx.dataset.label}: ${fmtNumber(ctx.parsed.y)}${isChar ? '자' : '회'}`,
-            },
-          },
-        },
-        scales: {
-          x: {
-            grid: { display: false },
-            ticks: { color: '#999', maxTicksLimit: 8, font: { size: 10, weight: '600' } },
-          },
-          y: {
-            grid: { color: 'rgba(0,0,0,.06)' },
-            ticks: {
-              color: '#999',
-              maxTicksLimit: 5,
-              font: { size: 10, weight: '600' },
-              callback: isChar ? (v) => (v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v) : undefined,
-            },
-          },
-        },
-      },
-    });
-
-    return () => {
-      if (chartRef.current) {
-        chartRef.current.destroy();
-        chartRef.current = null;
-      }
-    };
-  }, [daily, todayStr, metric]);
+// --- Stats ---
+function WritingStats({ records, daily }) {
+  const stats = useMemo(() => {
+    let totalMinutes = 0;
+    let totalChars = 0;
+    for (const r of records) {
+      totalMinutes += parseMinutes(r.start_time, r.end_time);
+      totalChars += r.char_count;
+    }
+    // fallback: if records don't have full data, use daily
+    if (totalChars === 0) {
+      totalChars = daily.reduce((s, d) => s + d.char_count, 0);
+    }
+    const charsPerHour = totalMinutes > 0 ? Math.round(totalChars / (totalMinutes / 60)) : 0;
+    return { totalMinutes, totalChars, charsPerHour };
+  }, [records, daily]);
 
   return (
     <section className="card">
-      <div className="card-header">
-        <h2>30일 추이</h2>
-        <div className="segmented">
-          {CHART_METRIC_OPTIONS.map((opt) => (
-            <button
-              key={opt.key}
-              type="button"
-              className={`segbtn ${metric === opt.key ? 'active' : ''}`}
-              onClick={() => setMetric(opt.key)}
-            >
-              {opt.label}
-            </button>
-          ))}
+      <div className="writing-stats-grid">
+        <div className="writing-stat">
+          <span className="writing-stat-label">누적 시간</span>
+          <span className="writing-stat-value">{fmtDuration(stats.totalMinutes)}</span>
         </div>
-      </div>
-      <div className="chart-wrap">
-        <canvas ref={canvasRef} aria-label="글쓰기 추이 차트" />
+        <div className="writing-stat">
+          <span className="writing-stat-label">누적 글자수</span>
+          <span className="writing-stat-value">{fmtNumber(stats.totalChars)}자</span>
+        </div>
+        <div className="writing-stat">
+          <span className="writing-stat-label">시간당 글자수</span>
+          <span className="writing-stat-value">{stats.charsPerHour > 0 ? `${fmtNumber(stats.charsPerHour)}자/h` : '-'}</span>
+        </div>
       </div>
     </section>
   );
 }
 
-function KeywordRankingList({ items, emptyMessage }) {
-  if (items.length === 0) {
-    return <p className="muted" style={{ marginTop: 8 }}>{emptyMessage}</p>;
-  }
-  const max = items[0]?.count || 1;
-  return (
-    <ul className="writing-kw-list">
-      {items.slice(0, 10).map(({ keyword, count }, i) => (
-        <li key={keyword} className="writing-kw-row">
-          <span className="writing-kw-rank">{i + 1}</span>
-          <span className="writing-kw-name">{keyword}</span>
-          <div className="writing-kw-bar-wrap">
-            <div className="writing-kw-bar" style={{ width: `${Math.round((count / max) * 100)}%` }} />
-          </div>
-          <span className="writing-kw-count">{count}회</span>
-        </li>
-      ))}
-    </ul>
+// --- Timelapse Videos ---
+function TimelapseSection({ records }) {
+  const videosDesc = useMemo(
+    () => records
+      .filter((r) => r.timelapse_video_url)
+      .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0)),
+    [records]
   );
-}
 
-function WritingKeywords({ writingData, selectedDate, dayMap }) {
-  const [rangeFrom, setRangeFrom] = useState('');
-  const [rangeTo, setRangeTo] = useState('');
+  if (videosDesc.length === 0) return null;
 
-  const periodKeywords = writingData.getKeywordFreqForRange(rangeFrom, rangeTo);
-
-  const selectedEntry = selectedDate ? dayMap.get(selectedDate) : null;
+  const latest = videosDesc[0];
+  const rest = videosDesc.slice(1, 7);
 
   return (
-    <section className="card">
-      <div className="card-header">
-        <h2>키워드</h2>
-      </div>
-
-      {selectedDate && (
-        <div className="writing-kw-section">
-          <p className="eyebrow">{fmtDateShort(selectedDate)} 키워드</p>
-          {selectedEntry && selectedEntry.keywords.length > 0 ? (
-            <div className="chips" style={{ marginTop: 8 }}>
-              {selectedEntry.keywords.map((kw) => (
-                <span key={kw} className="chip">{kw}</span>
-              ))}
-            </div>
-          ) : (
-            <p className="muted" style={{ marginTop: 8 }}>해당 날짜 키워드 없음</p>
+    <div className="writing-timelapse-section">
+      <div className="writing-timelapse-hero">
+        <video
+          className="writing-timelapse-video-hero"
+          src={latest.timelapse_video_url}
+          autoPlay
+          loop
+          muted
+          playsInline
+          preload="metadata"
+        />
+        <div className="writing-timelapse-hero-meta">
+          <span>{fmtDateShort(latest.date)}</span>
+          {latest.start_time && latest.end_time && (
+            <span>{latest.start_time}~{latest.end_time}</span>
+          )}
+          {latest.topics.length > 0 && (
+            <span>{latest.topics.join(', ')}</span>
           )}
         </div>
-      )}
-
-      <div className="writing-kw-section">
-        <p className="eyebrow">최근 30일 키워드 빈도</p>
-        <KeywordRankingList items={writingData.keywordFreq30} emptyMessage="최근 30일 키워드 없음" />
       </div>
-
-      <div className="writing-kw-section">
-        <p className="eyebrow">기간별 키워드</p>
-        <div className="writing-kw-range">
-          <input
-            type="date"
-            className="writing-date-input"
-            value={rangeFrom}
-            onChange={(e) => setRangeFrom(e.target.value)}
-            aria-label="시작일"
-          />
-          <span className="writing-kw-range-sep">~</span>
-          <input
-            type="date"
-            className="writing-date-input"
-            value={rangeTo}
-            onChange={(e) => setRangeTo(e.target.value)}
-            aria-label="종료일"
-          />
+      {rest.length > 0 && (
+        <div className="writing-timelapse-grid">
+          {rest.map((r) => (
+            <div key={r.id} className="writing-timelapse-grid-item">
+              <video
+                className="writing-timelapse-video-thumb"
+                src={r.timelapse_video_url}
+                autoPlay
+                loop
+                muted
+                playsInline
+                preload="metadata"
+              />
+              <span className="writing-timelapse-grid-label">{fmtDateShort(r.date)}</span>
+            </div>
+          ))}
         </div>
-        {rangeFrom && rangeTo && rangeFrom <= rangeTo ? (
-          <KeywordRankingList items={periodKeywords} emptyMessage="해당 기간 키워드 없음" />
-        ) : (
-          <p className="muted" style={{ marginTop: 8 }}>기간을 선택하면 키워드 랭킹이 표시됩니다.</p>
-        )}
+      )}
+    </div>
+  );
+}
+
+// --- Recent Topics ---
+function RecentTopics({ records }) {
+  const topicList = useMemo(() => {
+    const seen = new Map();
+    const sorted = [...records].sort((a, b) => (a.date < b.date ? 1 : -1));
+    for (const r of sorted) {
+      for (const t of r.topics) {
+        if (!seen.has(t)) seen.set(t, r.date);
+      }
+    }
+    return [...seen.entries()].slice(0, 20).map(([topic, date]) => ({ topic, date }));
+  }, [records]);
+
+  if (topicList.length === 0) return null;
+
+  return (
+    <section className="card">
+      <div className="card-header">
+        <h2>최근 주제</h2>
+      </div>
+      <div className="writing-topics-list">
+        {topicList.map(({ topic, date }) => (
+          <div key={topic} className="writing-topic-row">
+            <span className="writing-topic-name">{topic}</span>
+            <span className="writing-topic-date muted">{fmtDateShort(date)}</span>
+          </div>
+        ))}
       </div>
     </section>
   );
 }
 
-const EMPTY_WRITING = { daily: [] };
+// --- Streak ---
+function calcStreak(daily, todayStr) {
+  const dateSet = new Set(daily.filter((d) => d.char_count > 0).map((d) => d.date));
+  let streak = 0;
+  const cur = new Date(todayStr);
+  // include today or start from yesterday
+  if (!dateSet.has(todayStr)) {
+    cur.setDate(cur.getDate() - 1);
+  }
+  while (true) {
+    const dateStr = cur.toISOString().slice(0, 10);
+    if (!dateSet.has(dateStr)) break;
+    streak++;
+    cur.setDate(cur.getDate() - 1);
+  }
+  return streak;
+}
+
+// --- Main Page ---
+const EMPTY_WRITING = { daily: [], records: [] };
 
 export default function WritingPage() {
   const { data, loading, error, reload } = useDashboardQuery(writingDashboardRepository);
   const source = data || EMPTY_WRITING;
-  const writingData = useWritingDashboardData(source.daily);
-  const [selectedDate, setSelectedDate] = useState(null);
 
-  const handleSelectDate = useCallback((date) => setSelectedDate(date), []);
+  const todayStr = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const streak = useMemo(() => calcStreak(source.daily, todayStr), [source.daily, todayStr]);
 
   useEffect(() => {
     const screen = document.getElementById('screen-writing');
@@ -353,23 +324,16 @@ export default function WritingPage() {
         <section className="card writing-calendar-card">
           <div className="card-header">
             <h2>글쓰기 현황</h2>
-            <span className="muted" style={{ fontSize: 12 }}>최근 1년</span>
+            {streak > 0 && <span style={{ fontSize: 13, fontWeight: 700 }}>연속 {streak}일❤️‍🔥</span>}
           </div>
-          <WritingCalendar
-            daily={source.daily}
-            todayStr={writingData.todayStr}
-            selectedDate={selectedDate}
-            onSelectDate={handleSelectDate}
-          />
+          <WritingCalendar daily={source.daily} todayStr={todayStr} />
         </section>
 
-        <WritingChart daily={source.daily} todayStr={writingData.todayStr} />
+        <WritingStats records={source.records} daily={source.daily} />
 
-        <WritingKeywords
-          writingData={writingData}
-          selectedDate={selectedDate}
-          dayMap={writingData.dayMap}
-        />
+        <TimelapseSection records={source.records} />
+
+        <RecentTopics records={source.records} />
       </div>
     </section>
   );

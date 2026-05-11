@@ -182,17 +182,6 @@ function sanitizeExtraLinks(input) {
     .filter((link) => link.label && link.href && isHttpsUrl(link.href));
 }
 
-function urlBase64ToUint8Array(base64String) {
-  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-  const rawData = window.atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
-  for (let i = 0; i < rawData.length; i += 1) {
-    outputArray[i] = rawData.charCodeAt(i);
-  }
-  return outputArray;
-}
-
 function parseCreatedAt(value) {
   const raw = String(value || '').trim();
   if (!raw) return null;
@@ -213,6 +202,7 @@ function parseCreatedAt(value) {
 }
 
 export default function AdminApp() {
+  const [adminMode, setAdminMode] = useState('spending');
   const [adminTab, setAdminTab] = useState('record-input');
   const [showSettings, setShowSettings] = useState(false);
   const [passwordDraft, setPasswordDraft] = useState('');
@@ -229,19 +219,32 @@ export default function AdminApp() {
   const [isSavingRecord, setIsSavingRecord] = useState(false);
   const [isSavingSocial, setIsSavingSocial] = useState(false);
 
-  const [notifPermission, setNotifPermission] = useState(() =>
-    typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'unsupported'
-  );
-  const [pushSubscribed, setPushSubscribed] = useState(false);
-  const [isTogglingPush, setIsTogglingPush] = useState(false);
-  const [writingGoalDraft, setWritingGoalDraft] = useState('');
-  const [isSavingGoal, setIsSavingGoal] = useState(false);
+
+  const [writingForm, setWritingForm] = useState({
+    date: new Date().toISOString().slice(0, 10),
+    startTime: '',
+    endTime: '',
+    charCount: '',
+    topic: '',
+  });
+  const [writingVideoFile, setWritingVideoFile] = useState(null);
+  const [writingPhotoFiles, setWritingPhotoFiles] = useState([]);
+  const [writingPhotoInputKey, setWritingPhotoInputKey] = useState(0);
+  const [writingVideoInputKey, setWritingVideoInputKey] = useState(0);
+  const [isSavingWriting, setIsSavingWriting] = useState(false);
+  const [writingSubmitError, setWritingSubmitError] = useState('');
+  const [writingNotice, setWritingNotice] = useState('');
+  const [writingEditId, setWritingEditId] = useState(null);
+  const [writingRecords, setWritingRecords] = useState([]);
+  const [writingRecordsLoading, setWritingRecordsLoading] = useState(false);
+  const [writingEditDate, setWritingEditDate] = useState(new Date().toISOString().slice(0, 10));
 
   const [recordForm, setRecordForm] = useState(emptyRecordForm);
   const [useCustomEffectiveSegments, setUseCustomEffectiveSegments] = useState(false);
   const [newTagName, setNewTagName] = useState('');
   const [recordPhotoFile, setRecordPhotoFile] = useState(null);
   const [recordPhotoInputKey, setRecordPhotoInputKey] = useState(0);
+  const [recordEditId, setRecordEditId] = useState(null);
   const [deleteDate, setDeleteDate] = useState(new Date().toISOString().slice(0, 10));
   const [socialForm, setSocialForm] = useState({
     youtube_embed_url: '',
@@ -373,102 +376,6 @@ export default function AdminApp() {
     setSettingsNotice('비밀번호가 초기화되었습니다.');
   };
 
-  useEffect(() => {
-    if (!showSettings) return;
-    let cancelled = false;
-    adminRepository
-      .getWritingGoal()
-      .then((data) => {
-        if (cancelled) return;
-        const value = data?.goal;
-        setWritingGoalDraft(value == null ? '' : String(value));
-      })
-      .catch(() => {});
-
-    if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
-      navigator.serviceWorker.ready
-        .then((reg) => reg.pushManager.getSubscription())
-        .then((sub) => {
-          if (!cancelled) setPushSubscribed(!!sub);
-        })
-        .catch(() => {});
-    }
-    return () => {
-      cancelled = true;
-    };
-  }, [showSettings]);
-
-  const requestNotifPermission = async () => {
-    if (typeof window === 'undefined' || !('Notification' in window)) return;
-    setSettingsNotice('');
-    setSettingsError('');
-    try {
-      const result = await Notification.requestPermission();
-      setNotifPermission(result);
-      if (result === 'granted') {
-        setSettingsNotice('알림 권한이 허용되었습니다.');
-      } else if (result === 'denied') {
-        setSettingsError('알림 권한이 거부되었습니다. 브라우저 설정에서 변경할 수 있습니다.');
-      }
-    } catch (err) {
-      setSettingsError(err instanceof Error ? err.message : '알림 권한 요청 실패');
-    }
-  };
-
-  const togglePushSubscription = async () => {
-    if (isTogglingPush) return;
-    setSettingsNotice('');
-    setSettingsError('');
-    if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) {
-      setSettingsError('이 브라우저는 푸시 알림을 지원하지 않습니다.');
-      return;
-    }
-    setIsTogglingPush(true);
-    try {
-      const reg = await navigator.serviceWorker.ready;
-      const existing = await reg.pushManager.getSubscription();
-      if (existing) {
-        await existing.unsubscribe();
-        setPushSubscribed(false);
-        setSettingsNotice('푸시 알림 구독이 해제되었습니다.');
-      } else {
-        const vapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
-        if (!vapidKey) throw new Error('VAPID 공개 키가 설정되지 않았습니다.');
-        const sub = await reg.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(vapidKey),
-        });
-        await adminRepository.savePushSubscription(sub.toJSON(), password);
-        setPushSubscribed(true);
-        setSettingsNotice('푸시 알림 구독이 등록되었습니다.');
-      }
-    } catch (err) {
-      setSettingsError(err instanceof Error ? err.message : '구독 처리 중 오류가 발생했습니다.');
-    } finally {
-      setIsTogglingPush(false);
-    }
-  };
-
-  const saveWritingGoal = async () => {
-    if (isSavingGoal) return;
-    setSettingsNotice('');
-    setSettingsError('');
-    const trimmed = String(writingGoalDraft || '').trim();
-    if (trimmed && !(Number(trimmed) > 0)) {
-      setSettingsError('목표 글자 수는 0보다 큰 정수여야 합니다.');
-      return;
-    }
-    setIsSavingGoal(true);
-    try {
-      await adminRepository.updateWritingGoal(trimmed ? Number(trimmed) : null, password);
-      setSettingsNotice('목표 글자 수가 저장되었습니다.');
-    } catch (err) {
-      setSettingsError(err instanceof Error ? err.message : '목표 글자 수 저장 실패');
-    } finally {
-      setIsSavingGoal(false);
-    }
-  };
-
   const updateSegment = (idx, key, value) => {
     setRecordForm((prev) => {
       const next = [...prev.effective_segments];
@@ -553,16 +460,19 @@ export default function AdminApp() {
 
     setIsSavingRecord(true);
     try {
-      await adminRepository.createRecord(
-        {
-          ...recordForm,
-          amount: Number(recordForm.amount),
-          effective_segments: effectiveSegmentsPayload,
-          tags: tagPayload,
-        },
-        password,
-        recordPhotoFile
-      );
+      const payload = {
+        ...recordForm,
+        amount: Number(recordForm.amount),
+        effective_segments: effectiveSegmentsPayload,
+        tags: tagPayload,
+      };
+      if (recordEditId) {
+        await adminRepository.updateRecord(recordEditId, payload, password, recordPhotoFile);
+      } else {
+        await adminRepository.createRecord(payload, password, recordPhotoFile);
+      }
+      const wasEdit = !!recordEditId;
+      setRecordEditId(null);
       setRecordForm((prev) => ({
         ...emptyRecordForm(),
         type: prev.type,
@@ -573,7 +483,7 @@ export default function AdminApp() {
       setNewTagName('');
       setRecordPhotoFile(null);
       setRecordPhotoInputKey((prev) => prev + 1);
-      setNotice('기록이 저장되었습니다.');
+      setNotice(wasEdit ? '기록이 수정되었습니다.' : '기록이 저장되었습니다.');
       if (typeof window !== 'undefined') {
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
@@ -643,7 +553,24 @@ export default function AdminApp() {
   return (
     <main className="admin-root">
       <header className="admin-header">
-        <h1>Admin Input</h1>
+        <div className="admin-mode-btns">
+          <button
+            type="button"
+            className={`admin-mode-btn ${adminMode === 'spending' ? 'active' : ''}`}
+            disabled={isSubmittingAny}
+            onClick={() => { setAdminMode('spending'); setAdminTab('record-input'); }}
+          >
+            소비
+          </button>
+          <button
+            type="button"
+            className={`admin-mode-btn ${adminMode === 'writing' ? 'active' : ''}`}
+            disabled={isSubmittingAny}
+            onClick={() => { setAdminMode('writing'); setAdminTab('writing-input'); }}
+          >
+            글쓰기
+          </button>
+        </div>
         <button
           type="button"
           className="admin-btn ghost"
@@ -676,101 +603,62 @@ export default function AdminApp() {
             </div>
           </div>
 
-          <section className="admin-section">
-            <h3>푸시 알림</h3>
-            {notifPermission === 'unsupported' && (
-              <p className="admin-settings-message">이 브라우저는 알림을 지원하지 않습니다.</p>
-            )}
-            {notifPermission !== 'unsupported' && notifPermission !== 'granted' && (
-              <div className="admin-row two">
-                <span className="admin-settings-message">
-                  알림 권한: {notifPermission === 'denied' ? '거부됨' : '미설정'}
-                </span>
-                <button
-                  type="button"
-                  className="admin-btn primary"
-                  disabled={notifPermission === 'denied'}
-                  onClick={requestNotifPermission}
-                >
-                  알림 권한 요청
-                </button>
-              </div>
-            )}
-            {notifPermission === 'granted' && (
-              <div className="admin-row two">
-                <span className="admin-settings-message success">
-                  알림 권한: 허용됨 / 구독 {pushSubscribed ? '등록됨' : '미등록'}
-                </span>
-                <button
-                  type="button"
-                  className={`admin-btn ${pushSubscribed ? 'danger' : 'primary'}`}
-                  disabled={isTogglingPush}
-                  onClick={togglePushSubscription}
-                >
-                  {isTogglingPush ? '처리 중...' : pushSubscribed ? '구독 해제' : '구독 등록'}
-                </button>
-              </div>
-            )}
-          </section>
-
-          <section className="admin-section">
-            <h3>글쓰기 목표</h3>
-            <div className="admin-row two">
-              <label>
-                목표 글자 수
-                <input
-                  className="admin-input"
-                  type="number"
-                  min="0"
-                  value={writingGoalDraft}
-                  onChange={(e) => setWritingGoalDraft(e.target.value)}
-                  placeholder="미설정 (기본값 사용)"
-                />
-              </label>
-              <div className="admin-settings-actions">
-                <button
-                  type="button"
-                  className="admin-btn primary"
-                  disabled={isSavingGoal}
-                  onClick={saveWritingGoal}
-                >
-                  {isSavingGoal ? '저장 중...' : '저장'}
-                </button>
-              </div>
-            </div>
-          </section>
-
           {settingsError && <p className="admin-settings-message error">{settingsError}</p>}
           {settingsNotice && <p className="admin-settings-message success">{settingsNotice}</p>}
         </section>
       )}
 
-      <nav className="admin-tabs" aria-label="어드민 탭">
-        <button
-          type="button"
-          className={`admin-tab ${adminTab === 'record-input' ? 'active' : ''}`}
-          disabled={isSubmittingAny}
-          onClick={() => setAdminTab('record-input')}
-        >
-          기록입력
-        </button>
-        <button
-          type="button"
-          className={`admin-tab ${adminTab === 'record-delete' ? 'active' : ''}`}
-          disabled={isSubmittingAny}
-          onClick={() => setAdminTab('record-delete')}
-        >
-          기록삭제
-        </button>
-        <button
-          type="button"
-          className={`admin-tab ${adminTab === 'social-input' ? 'active' : ''}`}
-          disabled={isSubmittingAny}
-          onClick={() => setAdminTab('social-input')}
-        >
-          소셜입력
-        </button>
-      </nav>
+      {adminMode === 'spending' && (
+        <nav className="admin-tabs" aria-label="소비 탭">
+          <button
+            type="button"
+            className={`admin-tab ${adminTab === 'record-input' ? 'active' : ''}`}
+            disabled={isSubmittingAny}
+            onClick={() => setAdminTab('record-input')}
+          >
+            기록입력
+          </button>
+          <button
+            type="button"
+            className={`admin-tab ${adminTab === 'record-edit' ? 'active' : ''}`}
+            disabled={isSubmittingAny}
+            onClick={() => setAdminTab('record-edit')}
+          >
+            기록수정
+          </button>
+        </nav>
+      )}
+
+      {adminMode === 'writing' && (
+        <nav className="admin-tabs" aria-label="글쓰기 탭">
+          <button
+            type="button"
+            className={`admin-tab ${adminTab === 'writing-input' ? 'active' : ''}`}
+            disabled={isSubmittingAny}
+            onClick={() => setAdminTab('writing-input')}
+          >
+            기록입력
+          </button>
+          <button
+            type="button"
+            className={`admin-tab ${adminTab === 'writing-edit' ? 'active' : ''}`}
+            disabled={isSubmittingAny}
+            onClick={async () => {
+              setAdminTab('writing-edit');
+              if (writingRecords.length === 0) {
+                setWritingRecordsLoading(true);
+                try {
+                  const res = await adminRepository.getWritingRecords();
+                  setWritingRecords(res.records || []);
+                } catch { /* ignore */ }
+                setWritingRecordsLoading(false);
+              }
+            }}
+          >
+            기록수정
+          </button>
+        </nav>
+      )}
 
       {error && <section className="admin-card admin-error">{error}</section>}
       {notice && <section className="admin-card admin-notice">{notice}</section>}
@@ -779,15 +667,33 @@ export default function AdminApp() {
         <section className="admin-grid admin-tab-panel">
           <article className="admin-card">
           <div className="admin-title-row">
-            <h2>기록 입력</h2>
-            <button
-              type="button"
-              className="admin-btn ghost admin-btn-sm"
-              onClick={() => setShowRecentModal(true)}
-              disabled={isSavingRecord}
-            >
-              최근
-            </button>
+            <h2>{recordEditId ? '기록 수정' : '기록 입력'}</h2>
+            <div style={{ display: 'flex', gap: 6 }}>
+              {recordEditId && (
+                <button
+                  type="button"
+                  className="admin-btn ghost admin-btn-sm"
+                  onClick={() => {
+                    setRecordEditId(null);
+                    setRecordForm(emptyRecordForm());
+                    setUseCustomEffectiveSegments(false);
+                    setNewTagName('');
+                    setRecordPhotoFile(null);
+                    setRecordPhotoInputKey((k) => k + 1);
+                  }}
+                >
+                  새로 입력
+                </button>
+              )}
+              <button
+                type="button"
+                className="admin-btn ghost admin-btn-sm"
+                onClick={() => setShowRecentModal(true)}
+                disabled={isSavingRecord}
+              >
+                최근
+              </button>
+            </div>
           </div>
           <form className="admin-form" onSubmit={submitRecord}>
             <fieldset className="admin-fieldset" disabled={isSavingRecord}>
@@ -922,7 +828,7 @@ export default function AdminApp() {
             </section>
 
             <button type="submit" className="admin-btn primary">
-              {isSavingRecord ? '기록 저장 중...' : '기록 저장'}
+              {isSavingRecord ? (recordEditId ? '수정 중...' : '저장 중...') : (recordEditId ? '기록 수정' : '기록 저장')}
             </button>
             {recordSubmitError && <p className="admin-inline-error">{recordSubmitError}</p>}
             </fieldset>
@@ -931,9 +837,9 @@ export default function AdminApp() {
         </section>
       )}
 
-      {adminTab === 'record-delete' && (
+      {adminTab === 'record-edit' && (
         <section className="admin-card admin-tab-panel">
-        <h2>기록 목록</h2>
+        <h2>기록 수정/삭제</h2>
         <div className="admin-row two">
           <label>
             날짜 선택
@@ -980,7 +886,35 @@ export default function AdminApp() {
                     </a>
                   )}
                 </div>
-                <button type="button" className="admin-btn danger admin-record-delete-btn" onClick={() => removeRecord(record.id)}>삭제</button>
+                <div className="admin-record-actions">
+                  <button
+                    type="button"
+                    className="admin-btn ghost admin-btn-sm"
+                    onClick={() => {
+                      setRecordEditId(record.id);
+                      setRecordForm({
+                        type: record.type || 'expense',
+                        transaction_date: record.transaction_date || '',
+                        amount: String(record.amount || ''),
+                        memo: record.memo || '',
+                        effective_segments: (record.effective_segments || []).map((seg) => ({
+                          from: seg.effective_from || '',
+                          to: seg.effective_to || '',
+                          amount: String(seg.segment_amount || ''),
+                          percent: '',
+                        })),
+                        tags: (record.tags || []).map((t) => ({ name: t.name, amount: String(t.amount || '') })),
+                      });
+                      setRecordPhotoFile(null);
+                      setRecordPhotoInputKey((k) => k + 1);
+                      setAdminTab('record-input');
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                  >
+                    수정
+                  </button>
+                  <button type="button" className="admin-btn danger admin-btn-sm" onClick={() => removeRecord(record.id)}>삭제</button>
+                </div>
               </div>
             ))}
           </div>
@@ -988,48 +922,226 @@ export default function AdminApp() {
         </section>
       )}
 
-      {adminTab === 'social-input' && (
+
+      {adminTab === 'writing-input' && (
         <section className="admin-grid admin-tab-panel">
           <article className="admin-card">
-            <h2>소셜 링크 입력</h2>
-            <form className="admin-form" onSubmit={submitSocialLinks}>
-              <fieldset className="admin-fieldset" disabled={isSavingSocial}>
-              <label>
-                유튜브 임베드 URL
-                <input
-                  className="admin-input"
-                  type="text"
-                  value={socialForm.youtube_embed_url}
-                  onChange={(e) => setSocialForm((prev) => ({ ...prev, youtube_embed_url: e.target.value }))}
-                  placeholder="https://www.youtube.com/embed/..."
-                />
-              </label>
-              <label>
-                인스타 게시물 URL
-                <input
-                  className="admin-input"
-                  type="text"
-                  value={socialForm.instagram_post_url}
-                  onChange={(e) => setSocialForm((prev) => ({ ...prev, instagram_post_url: e.target.value }))}
-                  placeholder="https://www.instagram.com/p/..."
-                />
-              </label>
-              <label>
-                인스타 프로필 URL
-                <input
-                  className="admin-input"
-                  type="text"
-                  value={socialForm.instagram_profile_url}
-                  onChange={(e) => setSocialForm((prev) => ({ ...prev, instagram_profile_url: e.target.value }))}
-                  placeholder="https://www.instagram.com/ppanzziri/"
-                />
-              </label>
-              <button type="submit" className="admin-btn primary">
-                {isSavingSocial ? '소셜 저장 중...' : '소셜 저장'}
-              </button>
+            <div className="admin-title-row">
+              <h2>{writingEditId ? '글쓰기 기록 수정' : '글쓰기 기록 입력'}</h2>
+              {writingEditId && (
+                <button type="button" className="admin-btn ghost admin-btn-sm" onClick={() => {
+                  setWritingEditId(null);
+                  setWritingForm({ date: new Date().toISOString().slice(0, 10), startTime: '', endTime: '', charCount: '', topic: '' });
+                  setWritingVideoFile(null);
+                  setWritingPhotoFiles([]);
+                  setWritingPhotoInputKey((k) => k + 1);
+                  setWritingVideoInputKey((k) => k + 1);
+                }}>새로 입력</button>
+              )}
+            </div>
+            {writingSubmitError && <p className="admin-error">{writingSubmitError}</p>}
+            {writingNotice && <p className="admin-notice">{writingNotice}</p>}
+            <form
+              className="admin-form"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                setIsSavingWriting(true);
+                setWritingSubmitError('');
+                setWritingNotice('');
+                try {
+                  const topicTrimmed = (writingForm.topic || '').trim();
+                  const payload = {
+                    date: writingForm.date,
+                    startTime: writingForm.startTime,
+                    endTime: writingForm.endTime,
+                    charCount: writingForm.charCount,
+                    topics: topicTrimmed ? [topicTrimmed] : [],
+                    timelapseVideo: writingVideoFile,
+                    manuscriptPhotos: writingPhotoFiles.length > 0 ? writingPhotoFiles : undefined,
+                  };
+                  if (writingEditId) {
+                    await adminRepository.updateWritingRecord(writingEditId, payload, password);
+                    setWritingNotice('수정 완료!');
+                  } else {
+                    await adminRepository.createWritingRecord(payload, password);
+                    setWritingNotice('등록 완료!');
+                  }
+                  setWritingEditId(null);
+                  setWritingForm({ date: new Date().toISOString().slice(0, 10), startTime: '', endTime: '', charCount: '', topic: '' });
+                  setWritingVideoFile(null);
+                  setWritingPhotoFiles([]);
+                  setWritingPhotoInputKey((k) => k + 1);
+                  setWritingVideoInputKey((k) => k + 1);
+                  // reload records list
+                  try {
+                    const res = await adminRepository.getWritingRecords();
+                    setWritingRecords(res.records || []);
+                  } catch { /* ignore */ }
+                } catch (err) {
+                  setWritingSubmitError(err.message || (writingEditId ? '수정 실패' : '등록 실패'));
+                } finally {
+                  setIsSavingWriting(false);
+                }
+              }}
+            >
+              <fieldset className="admin-fieldset" disabled={isSavingWriting}>
+                <label>
+                  날짜
+                  <input
+                    className="admin-input"
+                    type="date"
+                    value={writingForm.date}
+                    onChange={(e) => setWritingForm((prev) => ({ ...prev, date: e.target.value }))}
+                    required
+                  />
+                </label>
+                <div className="admin-row two">
+                  <label>
+                    시작 시간
+                    <input
+                      className="admin-input"
+                      type="time"
+                      value={writingForm.startTime}
+                      onChange={(e) => setWritingForm((prev) => ({ ...prev, startTime: e.target.value }))}
+                    />
+                  </label>
+                  <label>
+                    끝난 시간
+                    <input
+                      className="admin-input"
+                      type="time"
+                      value={writingForm.endTime}
+                      onChange={(e) => setWritingForm((prev) => ({ ...prev, endTime: e.target.value }))}
+                    />
+                  </label>
+                </div>
+                <label>
+                  글자수
+                  <input
+                    className="admin-input"
+                    type="number"
+                    min="0"
+                    value={writingForm.charCount}
+                    onChange={(e) => setWritingForm((prev) => ({ ...prev, charCount: e.target.value }))}
+                    placeholder="직접 입력"
+                  />
+                </label>
+                <label>
+                  글 주제
+                  <input
+                    className="admin-input"
+                    type="text"
+                    value={writingForm.topic}
+                    onChange={(e) => setWritingForm((prev) => ({ ...prev, topic: e.target.value }))}
+                    placeholder="오늘 쓴 글의 주제"
+                  />
+                </label>
+                <label>
+                  타임랩스 영상
+                  <input
+                    key={writingVideoInputKey}
+                    className="admin-input"
+                    type="file"
+                    accept="video/*"
+                    onChange={(e) => setWritingVideoFile(e.target.files[0] || null)}
+                  />
+                </label>
+                <label>
+                  원고지 스캔 사진 (여러장, 선택사항)
+                  <input
+                    key={writingPhotoInputKey}
+                    className="admin-input"
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={(e) => setWritingPhotoFiles([...e.target.files])}
+                  />
+                  {writingPhotoFiles.length > 0 && (
+                    <span className="admin-meta">{writingPhotoFiles.length}장 선택됨</span>
+                  )}
+                </label>
+                <button type="submit" className="admin-btn primary">
+                  {isSavingWriting ? (writingEditId ? '수정 중...' : '등록 중...') : (writingEditId ? '글쓰기 기록 수정' : '글쓰기 기록 등록')}
+                </button>
               </fieldset>
             </form>
           </article>
+
+        </section>
+      )}
+
+      {adminTab === 'writing-edit' && (
+        <section className="admin-card admin-tab-panel">
+          <h2>글쓰기 기록 수정/삭제</h2>
+          <div className="admin-row two">
+            <label>
+              날짜 선택
+              <input
+                className="admin-input"
+                type="date"
+                value={writingEditDate}
+                onChange={(e) => setWritingEditDate(e.target.value)}
+              />
+            </label>
+          </div>
+          {writingRecordsLoading && <p>목록 로딩 중...</p>}
+          {!writingRecordsLoading && writingRecords.length === 0 && <p>기록이 없습니다. 불러오기를 눌러주세요.</p>}
+          {!writingRecordsLoading && writingRecords.length > 0 && writingRecords.filter((r) => r.date === writingEditDate).length === 0 && (
+            <p>선택한 날짜의 기록이 없습니다.</p>
+          )}
+          {!writingRecordsLoading && writingRecords.filter((r) => r.date === writingEditDate).length > 0 && (
+            <div className="admin-record-list">
+              {writingRecords.filter((r) => r.date === writingEditDate).map((r) => (
+                <div key={r.id} className="admin-record-item">
+                  <div className="admin-record-main">
+                    <strong>{r.date}</strong>
+                    <span className="admin-record-meta">
+                      {r.start_time && r.end_time ? `${r.start_time}~${r.end_time}` : ''} · {r.char_count}자
+                      {(r.topics || []).length > 0 ? ` · ${r.topics.join(', ')}` : ''}
+                    </span>
+                  </div>
+                  <div className="admin-record-actions">
+                    <button
+                      type="button"
+                      className="admin-btn ghost admin-btn-sm"
+                      onClick={() => {
+                        setWritingEditId(r.id);
+                        setWritingForm({
+                          date: r.date || '',
+                          startTime: r.start_time || '',
+                          endTime: r.end_time || '',
+                          charCount: r.char_count != null ? String(r.char_count) : '',
+                          topic: (r.topics || [])[0] || '',
+                        });
+                        setWritingVideoFile(null);
+                        setWritingPhotoFiles([]);
+                        setWritingPhotoInputKey((k) => k + 1);
+                        setWritingVideoInputKey((k) => k + 1);
+                        setWritingSubmitError('');
+                        setWritingNotice('');
+                        setAdminTab('writing-input');
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                    >
+                      수정
+                    </button>
+                    <button
+                      type="button"
+                      className="admin-btn danger admin-btn-sm"
+                      onClick={async () => {
+                        try {
+                          await adminRepository.deleteWritingRecord(r.id, password);
+                          setWritingRecords((prev) => prev.filter((x) => x.id !== r.id));
+                        } catch { /* ignore */ }
+                      }}
+                    >
+                      삭제
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
       )}
 

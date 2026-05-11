@@ -17,16 +17,22 @@ function parseArrayLike(value) {
 function normalizeDayEntry(raw) {
   return {
     date: String(raw?.date || ''),
-    char_count: Number(raw?.char_count ?? 0),
+    char_count: Number(raw?.char_count ?? raw?.total_char_count ?? 0),
     submission_count: Number(raw?.submission_count ?? 0),
     keywords: parseArrayLike(raw?.keywords).map(String).filter(Boolean),
   };
 }
 
-function normalizeWritingDashboardPayload(raw) {
-  const normalized = raw || {};
+function normalizeRecord(raw) {
   return {
-    daily: parseArrayLike(normalized.daily).map(normalizeDayEntry).filter((d) => d.date),
+    id: raw?.id,
+    date: String(raw?.date || ''),
+    start_time: String(raw?.start_time || ''),
+    end_time: String(raw?.end_time || ''),
+    timelapse_video_url: String(raw?.timelapse_video_url || ''),
+    topics: parseArrayLike(raw?.topics).map(String).filter(Boolean),
+    char_count: Number(raw?.char_count ?? 0),
+    manuscript_photos: parseArrayLike(raw?.manuscript_photos),
   };
 }
 
@@ -39,38 +45,72 @@ function buildMockDaily() {
     const dateStr = d.toISOString().slice(0, 10);
     const active = Math.random() > 0.45;
     if (active) {
-      const charCount = Math.floor(Math.random() * 3000) + 200;
-      const submissionCount = Math.floor(Math.random() * 4) + 1;
-      const allKeywords = ['글쓰기', '독서', '집중', '아이디어', '창작', '분석', '리뷰', '일기', '메모', '학습'];
-      const picked = allKeywords.sort(() => 0.5 - Math.random()).slice(0, Math.floor(Math.random() * 3) + 2);
+      const charCount = (Math.floor(Math.random() * 5) + 1) * 400;
+      const submissionCount = 1;
+      const allTopics = ['에세이', '일기', '독서감상', '편지', '기획서', '시', '소설', '칼럼', '메모', '수필'];
+      const picked = allTopics.sort(() => 0.5 - Math.random()).slice(0, Math.floor(Math.random() * 2) + 1);
       daily.push({ date: dateStr, char_count: charCount, submission_count: submissionCount, keywords: picked });
     }
   }
   return daily;
 }
 
+function buildMockRecords() {
+  const today = new Date();
+  const records = [];
+  const allTopics = ['에세이', '일기', '독서감상', '편지', '기획서', '시', '소설'];
+  for (let i = 0; i < 15; i++) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i * 2);
+    const dateStr = d.toISOString().slice(0, 10);
+    const startH = 6 + Math.floor(Math.random() * 4);
+    const duration = 30 + Math.floor(Math.random() * 60);
+    const endH = startH + Math.floor(duration / 60);
+    const endM = duration % 60;
+    records.push({
+      id: i + 1,
+      date: dateStr,
+      start_time: `${String(startH).padStart(2, '0')}:00`,
+      end_time: `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`,
+      timelapse_video_url: i % 3 === 0 ? '' : `https://example.com/video-${i}.mp4`,
+      topics: allTopics.sort(() => 0.5 - Math.random()).slice(0, Math.floor(Math.random() * 2) + 1),
+      char_count: (Math.floor(Math.random() * 5) + 1) * 400,
+      manuscript_photos: [],
+    });
+  }
+  return records;
+}
+
 export function createMockWritingDashboardRepository() {
-  return {
-    async getWritingDashboard() {
-      return { daily: buildMockDaily() };
+  const repo = {
+    async getDashboard() {
+      return { daily: buildMockDaily(), records: buildMockRecords() };
     },
   };
+  return repo;
 }
 
 export function createHttpWritingDashboardRepository({ baseUrl = ENV_API_BASE_URL, fetcher = fetch } = {}) {
-  return {
-    async getWritingDashboard({ from, to } = {}) {
-      const url = new URL(`${baseUrl}/ppanzziri/writing/dashboard`, window.location.origin);
-      if (from) url.searchParams.set('from', from);
-      if (to) url.searchParams.set('to', to);
-      const res = await fetcher(url.toString());
-      if (!res.ok) {
-        throw new Error(`writing dashboard fetch failed: ${res.status}`);
+  const repo = {
+    async getDashboard() {
+      const [dashRes, recordsRes] = await Promise.all([
+        fetcher(new URL(`${baseUrl}/ppanzziri/writing/dashboard`, window.location.origin).toString()),
+        fetcher(new URL(`${baseUrl}/ppanzziri/writing/records`, window.location.origin).toString()),
+      ]);
+      if (!dashRes.ok) throw new Error(`writing dashboard fetch failed: ${dashRes.status}`);
+      const dashJson = await dashRes.json();
+      const daily = parseArrayLike(dashJson?.daily).map(normalizeDayEntry).filter((d) => d.date);
+
+      let records = [];
+      if (recordsRes.ok) {
+        const recordsJson = await recordsRes.json();
+        records = parseArrayLike(recordsJson?.records).map(normalizeRecord);
       }
-      const json = await res.json();
-      return normalizeWritingDashboardPayload(json);
+
+      return { daily, records };
     },
   };
+  return repo;
 }
 
 export const writingDashboardRepository = USE_MOCK

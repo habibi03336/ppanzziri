@@ -43,6 +43,29 @@
   color: #666;
 }
 
+.admin-mode-btns {
+  display: flex;
+  gap: 4px;
+}
+
+.admin-mode-btn {
+  padding: 6px 16px;
+  border: 2px solid #ddd;
+  border-radius: 99px;
+  background: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  color: #888;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.admin-mode-btn.active {
+  border-color: #111;
+  background: #111;
+  color: #fff;
+}
+
 .admin-grid {
   display: grid;
   grid-template-columns: 1.3fr 0.9fr;
@@ -105,7 +128,7 @@
 .admin-tabs {
   margin-top: 12px;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(2, 1fr);
   gap: 8px;
 }
 
@@ -184,6 +207,25 @@
 
 .admin-row.tag-add {
   grid-template-columns: 1fr auto;
+}
+
+.admin-tag-input-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: end;
+}
+
+.admin-meta {
+  font-size: 12px;
+  color: #666;
+  margin-top: 4px;
+}
+
+.admin-record-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
 .admin-label {
@@ -489,7 +531,7 @@
   }
 
   .admin-tabs {
-    grid-template-columns: 1fr;
+    flex-wrap: wrap;
   }
 }
 

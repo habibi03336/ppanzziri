@@ -87,10 +87,7 @@ export default function SurvivalCurveCard({ expenseSeries, start30 }) {
     <section className="card card-lg">
       <div className="card-header">
         <h2>소비 곡선</h2>
-        <div className="segmented">
-          <button type="button" className={`segbtn ${range === 'all' ? 'active' : ''}`} onClick={() => setRange('all')}>전체</button>
-          <button type="button" className={`segbtn ${range === '30' ? 'active' : ''}`} onClick={() => setRange('30')}>30일</button>
-        </div>
+        <span className="muted" style={{ fontSize: 12 }}>*효용기준</span>
       </div>
       <div className="chart-wrap">
         <canvas ref={canvasRef} aria-label="누적 소비 추이 차트" />

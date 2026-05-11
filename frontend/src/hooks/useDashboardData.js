@@ -15,13 +15,13 @@ export default function useDashboardData(records, startCapital, social, apiDaysT
     const recordsAsc = sortByDateAsc(records, 'transaction_date');
     const totalExpense = recordsAsc.filter((r) => r.type === 'expense').reduce((s, r) => s + r.amount, 0);
 
+    const dailyExpenseEffAll = buildDailyEffectiveMap(records, 'expense');
+    const effDates = [...dailyExpenseEffAll.keys()].sort();
     const expenseSeries = [];
     let cumExp = 0;
-    for (const r of recordsAsc) {
-      if (r.type === 'expense') {
-        cumExp += r.amount;
-        expenseSeries.push({ date: r.transaction_date, expense: cumExp });
-      }
+    for (const d of effDates) {
+      cumExp += dailyExpenseEffAll.get(d);
+      expenseSeries.push({ date: d, expense: cumExp });
     }
 
     const asOfDate = toISODate(new Date());

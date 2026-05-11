@@ -2,11 +2,12 @@ import { useCallback, useEffect, useState } from 'react';
 import AppShell from './components/layout/AppShell.jsx';
 import FloatingTabMenu from './components/layout/FloatingTabMenu.jsx';
 import HomePage from './pages/HomePage.jsx';
-import RecordsPage from './pages/RecordsPage.jsx';
+import SpendingPage from './pages/SpendingPage.jsx';
 import WritingPage from './pages/WritingPage.jsx';
 import useDashboardData from './hooks/useDashboardData.js';
 import useDashboardQuery from './hooks/useDashboardQuery.js';
 import { dashboardRepository } from './services/dashboardRepository.js';
+import { writingDashboardRepository } from './services/writingDashboardRepository.js';
 import './styles/app-shell.css';
 
 const EMPTY_DASHBOARD = {
@@ -20,7 +21,7 @@ const EMPTY_DASHBOARD = {
     extra_links: [],
   },
 };
-const VALID_TABS = new Set(['home', 'records', 'writing']);
+const VALID_TABS = new Set(['home', 'spending', 'writing']);
 
 function normalizeTab(value) {
   const next = String(value || '').toLowerCase();
@@ -47,6 +48,7 @@ function buildUrlWithTab(tab) {
 export default function App() {
   const [tab, setTab] = useState(() => getTabFromLocation());
   const { data, loading, error, reload } = useDashboardQuery(dashboardRepository);
+  const { data: writingData } = useDashboardQuery(writingDashboardRepository);
   const source = data || EMPTY_DASHBOARD;
   const dashboard = useDashboardData(source.records, source.startCapital, source.social, source.days_to_goal);
   const handleTabChange = useCallback((nextTab, { push = true } = {}) => {
@@ -81,13 +83,15 @@ export default function App() {
     <AppShell
       floatingNav={<FloatingTabMenu activeTab={tab} onChange={handleTabChange} />}
     >
-      {tab !== 'writing' && loading && (
+      {tab === 'home' && <HomePage dashboard={dashboard} writingData={writingData} onNavigate={handleTabChange} />}
+
+      {tab === 'spending' && loading && (
         <section className="screen active">
           <section className="card"><p className="muted">대시보드 데이터를 불러오는 중...</p></section>
         </section>
       )}
 
-      {tab !== 'writing' && !loading && error && (
+      {tab === 'spending' && !loading && error && (
         <section className="screen active">
           <section className="card">
             <p className="muted">데이터를 불러오지 못했습니다.</p>
@@ -96,8 +100,7 @@ export default function App() {
         </section>
       )}
 
-      {!loading && !error && tab === 'home' && <HomePage dashboard={dashboard} onNavigate={handleTabChange} />}
-      {!loading && !error && tab === 'records' && <RecordsPage groupedRecords={dashboard.groupedRecords} />}
+      {!loading && !error && tab === 'spending' && <SpendingPage dashboard={dashboard} />}
       {tab === 'writing' && <WritingPage />}
     </AppShell>
   );

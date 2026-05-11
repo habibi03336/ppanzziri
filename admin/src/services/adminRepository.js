@@ -137,6 +137,32 @@ export function createHttpAdminRepository({ baseUrl = API_BASE_URL, fetcher = fe
       return res.json().catch(() => ({}));
     },
 
+    async updateRecord(id, record, password, photoFile) {
+      const formData = new FormData();
+      formData.append('type', record.type || 'expense');
+      formData.append('transaction_date', record.transaction_date);
+      formData.append('amount', String(record.amount));
+      formData.append('memo', record.memo || '');
+      if (record.effective_segments) {
+        formData.append('effective_segments', JSON.stringify(record.effective_segments));
+      }
+      if (record.tags) {
+        formData.append('tags', JSON.stringify(record.tags));
+      }
+      if (photoFile) formData.append('photo', photoFile);
+
+      const headers = {};
+      if (password) headers['X-Admin-Password'] = password;
+
+      const res = await fetcher(`${baseUrl}/budget/records/${id}`, {
+        method: 'PUT',
+        headers,
+        body: formData,
+      });
+      if (!res.ok) throw new Error(`record update failed: ${res.status}`);
+      return res.json().catch(() => ({}));
+    },
+
     async deleteRecord(id, password) {
       const res = await fetcher(`${baseUrl}/budget/records/${id}`, {
         method: 'DELETE',
@@ -173,35 +199,68 @@ export function createHttpAdminRepository({ baseUrl = API_BASE_URL, fetcher = fe
       return res.json().catch(() => ({}));
     },
 
-    async savePushSubscription(subscription, password) {
-      const res = await fetcher(`${baseUrl}/writing/push-subscription`, {
+    async createWritingRecord({ date, startTime, endTime, charCount, topics, timelapseVideo, manuscriptPhotos }, password) {
+      const formData = new FormData();
+      formData.append('date', date);
+      if (startTime) formData.append('start_time', startTime);
+      if (endTime) formData.append('end_time', endTime);
+      if (charCount !== '' && charCount != null) formData.append('char_count', charCount);
+      formData.append('topics', JSON.stringify(topics || []));
+      if (timelapseVideo) formData.append('timelapse_video', timelapseVideo);
+      if (manuscriptPhotos && manuscriptPhotos.length) {
+        manuscriptPhotos.forEach((file) => formData.append('manuscript_photos', file));
+      }
+
+      const headers = {};
+      if (password) headers['X-Admin-Password'] = password;
+
+      const res = await fetcher(`${baseUrl}/writing/records`, {
         method: 'POST',
-        headers: buildHeaders(password),
-        body: JSON.stringify(subscription),
+        headers,
+        body: formData,
       });
-      if (!res.ok) throw new Error(`push subscription failed: ${res.status}`);
+      if (!res.ok) throw new Error(`writing record create failed: ${res.status}`);
       return res.json().catch(() => ({}));
     },
 
-    async getWritingGoal() {
-      const res = await fetcher(`${baseUrl}/writing/goal`);
-      if (!res.ok) throw new Error(`writing goal fetch failed: ${res.status}`);
-      const json = await res.json().catch(() => ({}));
-      const raw = json?.goal;
-      const num = Number(raw);
-      return { goal: Number.isFinite(num) && num > 0 ? num : null };
+    async getWritingRecords() {
+      const res = await fetcher(`${baseUrl}/writing/records`);
+      if (!res.ok) throw new Error(`writing records fetch failed: ${res.status}`);
+      return res.json().catch(() => ({ records: [] }));
     },
 
-    async updateWritingGoal(goal, password) {
-      const num = Number(goal);
-      const payload = { goal: Number.isFinite(num) && num > 0 ? num : null };
-      const res = await fetcher(`${baseUrl}/writing/goal`, {
+    async updateWritingRecord(id, { date, startTime, endTime, charCount, topics, timelapseVideo, manuscriptPhotos }, password) {
+      const formData = new FormData();
+      formData.append('date', date);
+      if (startTime) formData.append('start_time', startTime);
+      if (endTime) formData.append('end_time', endTime);
+      if (charCount !== '' && charCount != null) formData.append('char_count', charCount);
+      formData.append('topics', JSON.stringify(topics || []));
+      if (timelapseVideo) formData.append('timelapse_video', timelapseVideo);
+      if (manuscriptPhotos && manuscriptPhotos.length) {
+        manuscriptPhotos.forEach((file) => formData.append('manuscript_photos', file));
+      }
+
+      const headers = {};
+      if (password) headers['X-Admin-Password'] = password;
+
+      const res = await fetcher(`${baseUrl}/writing/records/${id}`, {
         method: 'PUT',
-        headers: buildHeaders(password),
-        body: JSON.stringify(payload),
+        headers,
+        body: formData,
       });
-      if (!res.ok) throw new Error(`writing goal update failed: ${res.status}`);
+      if (!res.ok) throw new Error(`writing record update failed: ${res.status}`);
       return res.json().catch(() => ({}));
+    },
+
+    async deleteWritingRecord(id, password) {
+      const headers = {};
+      if (password) headers['X-Admin-Password'] = password;
+      const res = await fetcher(`${baseUrl}/writing/records/${id}`, {
+        method: 'DELETE',
+        headers,
+      });
+      if (!res.ok) throw new Error(`writing record delete failed: ${res.status}`);
     },
   };
 }
@@ -209,8 +268,6 @@ export function createHttpAdminRepository({ baseUrl = API_BASE_URL, fetcher = fe
 export function createMockAdminRepository() {
   let records = seedRecords.map((r) => ({ ...r, tags: [...r.tags], effective_segments: [...r.effective_segments] }));
   let socialLinks = normalizeSocial(seedSocial);
-  let writingGoal = null;
-  let pushSubscriptions = [];
 
   return {
     async getRecords() {
@@ -222,6 +279,11 @@ export function createMockAdminRepository() {
       const photoUrl = photoFile instanceof File ? URL.createObjectURL(photoFile) : record.photo_url || '';
       const createdAt = new Date().toISOString();
       records = [{ id, created_at: createdAt, ...record, photo_url: photoUrl }, ...records];
+      return { id };
+    },
+
+    async updateRecord(id, record) {
+      records = records.map((r) => String(r.id) === String(id) ? { ...r, ...record } : r);
       return { id };
     },
 
@@ -244,20 +306,20 @@ export function createMockAdminRepository() {
       return { ok: true };
     },
 
-    async savePushSubscription(subscription) {
-      pushSubscriptions = [...pushSubscriptions, subscription];
-      return { ok: true };
+
+    async createWritingRecord(data) {
+      return { id: Date.now(), ...data };
     },
 
-    async getWritingGoal() {
-      return { goal: writingGoal };
+    async updateWritingRecord(id, data) {
+      return { id, ...data };
     },
 
-    async updateWritingGoal(goal) {
-      const num = Number(goal);
-      writingGoal = Number.isFinite(num) && num > 0 ? num : null;
-      return { goal: writingGoal };
+    async getWritingRecords() {
+      return { records: [] };
     },
+
+    async deleteWritingRecord() {},
   };
 }
 

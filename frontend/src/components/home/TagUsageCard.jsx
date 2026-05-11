@@ -1,28 +1,9 @@
 import { fmtKRW } from '../../utils/format.js';
-import { useEffect, useMemo, useState } from 'react';
 
 const COLORS = ['#111111', '#1f3a8a', '#6f624c', '#d48fa3', '#444444'];
 
 export default function TagUsageCard({ tagItems }) {
-  const [isMediumUp, setIsMediumUp] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    return window.matchMedia('(min-width: 768px)').matches;
-  });
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return undefined;
-    const mql = window.matchMedia('(min-width: 768px)');
-    const onChange = (e) => setIsMediumUp(e.matches);
-    setIsMediumUp(mql.matches);
-    if (typeof mql.addEventListener === 'function') {
-      mql.addEventListener('change', onChange);
-      return () => mql.removeEventListener('change', onChange);
-    }
-    mql.addListener(onChange);
-    return () => mql.removeListener(onChange);
-  }, []);
-
-  const visibleItems = useMemo(() => (isMediumUp ? tagItems : tagItems.slice(0, 5)), [isMediumUp, tagItems]);
+  const visibleItems = tagItems;
   const total = tagItems.reduce((s, item) => s + item.value, 0) || 1;
 
   return (
