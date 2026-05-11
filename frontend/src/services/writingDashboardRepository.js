@@ -94,8 +94,8 @@ export function createHttpWritingDashboardRepository({ baseUrl = ENV_API_BASE_UR
   const repo = {
     async getDashboard() {
       const [dashRes, recordsRes] = await Promise.all([
-        fetcher(new URL(`${baseUrl}/ppanzziri/writing/dashboard`, window.location.origin).toString()),
-        fetcher(new URL(`${baseUrl}/ppanzziri/writing/records`, window.location.origin).toString()),
+        fetcher(new URL(`${baseUrl}/writing/dashboard`, window.location.origin).toString()),
+        fetcher(new URL(`${baseUrl}/writing/records`, window.location.origin).toString()),
       ]);
       if (!dashRes.ok) throw new Error(`writing dashboard fetch failed: ${dashRes.status}`);
       const dashJson = await dashRes.json();
