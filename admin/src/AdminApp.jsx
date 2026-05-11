@@ -226,6 +226,7 @@ export default function AdminApp() {
     endTime: '',
     charCount: '',
     topic: '',
+    placeName: '',
   });
   const [writingVideoFile, setWritingVideoFile] = useState(null);
   const [writingPhotoFiles, setWritingPhotoFiles] = useState([]);
@@ -931,7 +932,7 @@ export default function AdminApp() {
               {writingEditId && (
                 <button type="button" className="admin-btn ghost admin-btn-sm" onClick={() => {
                   setWritingEditId(null);
-                  setWritingForm({ date: new Date().toISOString().slice(0, 10), startTime: '', endTime: '', charCount: '', topic: '' });
+                  setWritingForm({ date: new Date().toISOString().slice(0, 10), startTime: '', endTime: '', charCount: '', topic: '', placeName: '' });
                   setWritingVideoFile(null);
                   setWritingPhotoFiles([]);
                   setWritingPhotoInputKey((k) => k + 1);
@@ -956,6 +957,7 @@ export default function AdminApp() {
                     endTime: writingForm.endTime,
                     charCount: writingForm.charCount,
                     topics: topicTrimmed ? [topicTrimmed] : [],
+                    placeName: writingForm.placeName,
                     timelapseVideo: writingVideoFile,
                     manuscriptPhotos: writingPhotoFiles.length > 0 ? writingPhotoFiles : undefined,
                   };
@@ -967,7 +969,7 @@ export default function AdminApp() {
                     setWritingNotice('등록 완료!');
                   }
                   setWritingEditId(null);
-                  setWritingForm({ date: new Date().toISOString().slice(0, 10), startTime: '', endTime: '', charCount: '', topic: '' });
+                  setWritingForm({ date: new Date().toISOString().slice(0, 10), startTime: '', endTime: '', charCount: '', topic: '', placeName: '' });
                   setWritingVideoFile(null);
                   setWritingPhotoFiles([]);
                   setWritingPhotoInputKey((k) => k + 1);
@@ -1037,6 +1039,16 @@ export default function AdminApp() {
                   />
                 </label>
                 <label>
+                  공간이름
+                  <input
+                    className="admin-input"
+                    type="text"
+                    value={writingForm.placeName}
+                    onChange={(e) => setWritingForm((prev) => ({ ...prev, placeName: e.target.value }))}
+                    placeholder="글 쓴 장소"
+                  />
+                </label>
+                <label>
                   타임랩스 영상
                   <input
                     key={writingVideoInputKey}
@@ -1098,6 +1110,7 @@ export default function AdminApp() {
                     <span className="admin-record-meta">
                       {r.start_time && r.end_time ? `${r.start_time}~${r.end_time}` : ''} · {r.char_count}자
                       {(r.topics || []).length > 0 ? ` · ${r.topics.join(', ')}` : ''}
+                      {r.place_name ? ` · ${r.place_name}` : ''}
                     </span>
                   </div>
                   <div className="admin-record-actions">
@@ -1112,6 +1125,7 @@ export default function AdminApp() {
                           endTime: r.end_time || '',
                           charCount: r.char_count != null ? String(r.char_count) : '',
                           topic: (r.topics || [])[0] || '',
+                          placeName: r.place_name || '',
                         });
                         setWritingVideoFile(null);
                         setWritingPhotoFiles([]);

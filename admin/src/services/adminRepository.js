@@ -199,13 +199,14 @@ export function createHttpAdminRepository({ baseUrl = API_BASE_URL, fetcher = fe
       return res.json().catch(() => ({}));
     },
 
-    async createWritingRecord({ date, startTime, endTime, charCount, topics, timelapseVideo, manuscriptPhotos }, password) {
+    async createWritingRecord({ date, startTime, endTime, charCount, topics, placeName, timelapseVideo, manuscriptPhotos }, password) {
       const formData = new FormData();
       formData.append('date', date);
       if (startTime) formData.append('start_time', startTime);
       if (endTime) formData.append('end_time', endTime);
       if (charCount !== '' && charCount != null) formData.append('char_count', charCount);
       formData.append('topics', JSON.stringify(topics || []));
+      if (placeName) formData.append('place_name', placeName);
       if (timelapseVideo) formData.append('timelapse_video', timelapseVideo);
       if (manuscriptPhotos && manuscriptPhotos.length) {
         manuscriptPhotos.forEach((file) => formData.append('manuscript_photos', file));
@@ -229,13 +230,14 @@ export function createHttpAdminRepository({ baseUrl = API_BASE_URL, fetcher = fe
       return res.json().catch(() => ({ records: [] }));
     },
 
-    async updateWritingRecord(id, { date, startTime, endTime, charCount, topics, timelapseVideo, manuscriptPhotos }, password) {
+    async updateWritingRecord(id, { date, startTime, endTime, charCount, topics, placeName, timelapseVideo, manuscriptPhotos }, password) {
       const formData = new FormData();
       formData.append('date', date);
       if (startTime) formData.append('start_time', startTime);
       if (endTime) formData.append('end_time', endTime);
       if (charCount !== '' && charCount != null) formData.append('char_count', charCount);
       formData.append('topics', JSON.stringify(topics || []));
+      if (placeName != null) formData.append('place_name', placeName);
       if (timelapseVideo) formData.append('timelapse_video', timelapseVideo);
       if (manuscriptPhotos && manuscriptPhotos.length) {
         manuscriptPhotos.forEach((file) => formData.append('manuscript_photos', file));

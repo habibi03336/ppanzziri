@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import useDashboardQuery from '../hooks/useDashboardQuery.js';
 import { writingDashboardRepository } from '../services/writingDashboardRepository.js';
+import WritingGlobe from '../components/home/WritingGlobe.jsx';
 
 const HEATMAP_COLORS = [
   '#ebedf0',
@@ -12,9 +13,9 @@ const HEATMAP_COLORS = [
 
 function getHeatmapLevel(charCount) {
   if (charCount <= 0) return 0;
-  if (charCount < 500) return 1;
-  if (charCount < 1000) return 2;
-  if (charCount < 2000) return 3;
+  if (charCount < 800) return 1;
+  if (charCount < 1600) return 2;
+  if (charCount < 2400) return 3;
   return 4;
 }
 
@@ -45,12 +46,12 @@ function fmtDuration(minutes) {
   return `${h}시간 ${m}분`;
 }
 
-// --- Calendar (no scroll, fit in view) ---
+// --- Calendar (6 months, no scroll, fit in view) ---
 function buildCalendarWeeks(daily, todayStr) {
   const dayMap = new Map(daily.map((d) => [d.date, d]));
   const today = new Date(todayStr);
   const startDate = new Date(today);
-  startDate.setDate(startDate.getDate() - 364);
+  startDate.setDate(startDate.getDate() - 182);
   startDate.setDate(startDate.getDate() - startDate.getDay());
 
   const weeks = [];
@@ -134,8 +135,8 @@ function WritingCalendar({ daily, todayStr }) {
   );
 }
 
-// --- Stats ---
-function WritingStats({ records, daily }) {
+// --- Stats (inline, used inside calendar card) ---
+function WritingStatsInline({ records, daily }) {
   const stats = useMemo(() => {
     let totalMinutes = 0;
     let totalChars = 0;
@@ -143,7 +144,6 @@ function WritingStats({ records, daily }) {
       totalMinutes += parseMinutes(r.start_time, r.end_time);
       totalChars += r.char_count;
     }
-    // fallback: if records don't have full data, use daily
     if (totalChars === 0) {
       totalChars = daily.reduce((s, d) => s + d.char_count, 0);
     }
@@ -152,80 +152,123 @@ function WritingStats({ records, daily }) {
   }, [records, daily]);
 
   return (
-    <section className="card">
-      <div className="writing-stats-grid">
-        <div className="writing-stat">
-          <span className="writing-stat-label">누적 시간</span>
-          <span className="writing-stat-value">{fmtDuration(stats.totalMinutes)}</span>
-        </div>
-        <div className="writing-stat">
-          <span className="writing-stat-label">누적 글자수</span>
-          <span className="writing-stat-value">{fmtNumber(stats.totalChars)}자</span>
-        </div>
-        <div className="writing-stat">
-          <span className="writing-stat-label">시간당 글자수</span>
-          <span className="writing-stat-value">{stats.charsPerHour > 0 ? `${fmtNumber(stats.charsPerHour)}자/h` : '-'}</span>
-        </div>
+    <div className="writing-stats-inline">
+      <div className="writing-stat-inline">
+        <span className="writing-stat-inline-value">{fmtDuration(stats.totalMinutes)}</span>
+        <span className="writing-stat-inline-label">누적 시간</span>
       </div>
-    </section>
+      <div className="writing-stat-inline">
+        <span className="writing-stat-inline-value">{fmtNumber(stats.totalChars)}자</span>
+        <span className="writing-stat-inline-label">누적 글자수</span>
+      </div>
+      <div className="writing-stat-inline">
+        <span className="writing-stat-inline-value">{stats.charsPerHour > 0 ? `${fmtNumber(stats.charsPerHour)}자/h` : '-'}</span>
+        <span className="writing-stat-inline-label">시간당</span>
+      </div>
+    </div>
   );
 }
 
-// --- Timelapse Videos ---
-function TimelapseSection({ records }) {
-  const videosDesc = useMemo(
-    () => records
-      .filter((r) => r.timelapse_video_url)
-      .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0)),
-    [records]
+// --- Place + Timelapse (combined row) ---
+function PlaceTimelapse({ records }) {
+  const videoRef = useRef(null);
+
+  // Most recent record with location
+  const latestWithLocation = useMemo(
+    () => [...records]
+      .filter((r) => r.latitude != null && r.longitude != null)
+      .sort((a, b) => (a.date < b.date ? 1 : -1))[0] || null,
+    [records],
   );
 
-  if (videosDesc.length === 0) return null;
+  const [selected, setSelected] = useState(null);
 
-  const latest = videosDesc[0];
-  const rest = videosDesc.slice(1, 7);
+  // Default select latest on mount
+  useEffect(() => {
+    if (!selected && latestWithLocation) {
+      setSelected(latestWithLocation);
+    }
+  }, [latestWithLocation]);
+
+  // Records with location data for the map
+  const hasLocations = useMemo(
+    () => records.some((r) => r.latitude != null && r.longitude != null),
+    [records],
+  );
+
+  // Find the video to show: selected record's video, or latest video as fallback
+  const activeRecord = useMemo(() => {
+    if (selected && selected.timelapse_video_url) return selected;
+    if (selected) {
+      const match = records.find((r) => r.id === selected.id && r.timelapse_video_url);
+      if (match) return match;
+    }
+    return null;
+  }, [selected, records]);
+
+  // Auto-play when video source changes
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.load();
+      videoRef.current.play().catch(() => {});
+    }
+  }, [activeRecord?.timelapse_video_url]);
+
+  const hasVideo = activeRecord && activeRecord.timelapse_video_url;
+
+  if (!hasLocations && !hasVideo) return null;
 
   return (
-    <div className="writing-timelapse-section">
-      <div className="writing-timelapse-hero">
-        <video
-          className="writing-timelapse-video-hero"
-          src={latest.timelapse_video_url}
-          autoPlay
-          loop
-          muted
-          playsInline
-          preload="metadata"
-        />
-        <div className="writing-timelapse-hero-meta">
-          <span>{fmtDateShort(latest.date)}</span>
-          {latest.start_time && latest.end_time && (
-            <span>{latest.start_time}~{latest.end_time}</span>
-          )}
-          {latest.topics.length > 0 && (
-            <span>{latest.topics.join(', ')}</span>
-          )}
-        </div>
-      </div>
-      {rest.length > 0 && (
-        <div className="writing-timelapse-grid">
-          {rest.map((r) => (
-            <div key={r.id} className="writing-timelapse-grid-item">
+    <section className="card writing-place-timelapse-card">
+      <div className="writing-place-timelapse-row">
+        {hasLocations && (
+          <WritingGlobe
+            records={records}
+            selected={selected}
+            onSelect={(loc) => setSelected(loc || null)}
+          />
+        )}
+        <div className="writing-timelapse-panel">
+          {hasVideo ? (
+            <div className="writing-timelapse-hero">
               <video
-                className="writing-timelapse-video-thumb"
-                src={r.timelapse_video_url}
+                ref={videoRef}
+                className="writing-timelapse-video-hero"
+                src={activeRecord.timelapse_video_url}
                 autoPlay
                 loop
                 muted
                 playsInline
                 preload="metadata"
               />
-              <span className="writing-timelapse-grid-label">{fmtDateShort(r.date)}</span>
+              <div className="writing-timelapse-hero-meta">
+                <span>{fmtDateShort(activeRecord.date)}</span>
+                {activeRecord.start_time && activeRecord.end_time && (
+                  <span>{activeRecord.start_time}~{activeRecord.end_time}</span>
+                )}
+                {activeRecord.place_name && (
+                  <span>{activeRecord.place_name}</span>
+                )}
+                {(activeRecord.topics || []).length > 0 && (
+                  <span>{activeRecord.topics.join(', ')}</span>
+                )}
+              </div>
             </div>
-          ))}
+          ) : (
+            <div className="writing-timelapse-empty">
+              {selected ? (
+                <p className="muted">
+                  {selected.place_name || fmtDateShort(selected.date)}
+                  <br />타임랩스 없음
+                </p>
+              ) : (
+                <p className="muted">장소를 선택하세요</p>
+              )}
+            </div>
+          )}
         </div>
-      )}
-    </div>
+      </div>
+    </section>
   );
 }
 
@@ -322,16 +365,17 @@ export default function WritingPage() {
     <section className="screen active" id="screen-writing">
       <div className="stack-page">
         <section className="card writing-calendar-card">
-          <div className="card-header">
-            <h2>글쓰기 현황</h2>
-            {streak > 0 && <span style={{ fontSize: 13, fontWeight: 700 }}>연속 {streak}일❤️‍🔥</span>}
+          <div className="writing-status-header">
+            <div className="writing-status-header-left">
+              <h2 style={{ margin: 0, fontSize: 22 }}>글쓰기 현황</h2>
+              {streak > 0 && <span style={{ fontSize: 13, fontWeight: 700 }}>연속 {streak}일❤️‍🔥</span>}
+            </div>
+            <WritingStatsInline records={source.records} daily={source.daily} />
           </div>
           <WritingCalendar daily={source.daily} todayStr={todayStr} />
         </section>
 
-        <WritingStats records={source.records} daily={source.daily} />
-
-        <TimelapseSection records={source.records} />
+        <PlaceTimelapse records={source.records} />
 
         <RecentTopics records={source.records} />
       </div>

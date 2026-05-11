@@ -32,6 +32,9 @@ function normalizeRecord(raw) {
     timelapse_video_url: String(raw?.timelapse_video_url || ''),
     topics: parseArrayLike(raw?.topics).map(String).filter(Boolean),
     char_count: Number(raw?.char_count ?? 0),
+    place_name: String(raw?.place_name || ''),
+    latitude: raw?.latitude != null ? Number(raw.latitude) : null,
+    longitude: raw?.longitude != null ? Number(raw.longitude) : null,
     manuscript_photos: parseArrayLike(raw?.manuscript_photos),
   };
 }
@@ -59,6 +62,14 @@ function buildMockRecords() {
   const today = new Date();
   const records = [];
   const allTopics = ['에세이', '일기', '독서감상', '편지', '기획서', '시', '소설'];
+  const allPlaces = ['집', '카페', '도서관', '공원', '학교', ''];
+  const placeCoords = {
+    '집': [37.5665, 126.9780],
+    '카페': [37.5550, 126.9368],
+    '도서관': [37.5820, 127.0016],
+    '공원': [37.5443, 127.0557],
+    '학교': [37.5664, 126.9389],
+  };
   for (let i = 0; i < 15; i++) {
     const d = new Date(today);
     d.setDate(d.getDate() - i * 2);
@@ -67,6 +78,8 @@ function buildMockRecords() {
     const duration = 30 + Math.floor(Math.random() * 60);
     const endH = startH + Math.floor(duration / 60);
     const endM = duration % 60;
+    const place = allPlaces[Math.floor(Math.random() * allPlaces.length)];
+    const coords = placeCoords[place] || null;
     records.push({
       id: i + 1,
       date: dateStr,
@@ -75,6 +88,9 @@ function buildMockRecords() {
       timelapse_video_url: i % 3 === 0 ? '' : `https://example.com/video-${i}.mp4`,
       topics: allTopics.sort(() => 0.5 - Math.random()).slice(0, Math.floor(Math.random() * 2) + 1),
       char_count: (Math.floor(Math.random() * 5) + 1) * 400,
+      place_name: place,
+      latitude: coords ? coords[0] : null,
+      longitude: coords ? coords[1] : null,
       manuscript_photos: [],
     });
   }
