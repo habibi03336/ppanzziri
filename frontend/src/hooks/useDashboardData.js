@@ -16,7 +16,8 @@ export default function useDashboardData(records, startCapital, social, apiDaysT
     const totalExpense = recordsAsc.filter((r) => r.type === 'expense').reduce((s, r) => s + r.amount, 0);
 
     const dailyExpenseEffAll = buildDailyEffectiveMap(records, 'expense');
-    const effDates = [...dailyExpenseEffAll.keys()].sort();
+    const today = toISODate(new Date());
+    const effDates = [...dailyExpenseEffAll.keys()].filter((d) => d <= today).sort();
     const expenseSeries = [];
     let cumExp = 0;
     for (const d of effDates) {
