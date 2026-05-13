@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { fmtDateKRFull, fmtKRW } from './utils/format.js';
 import { adminRepository } from './services/adminRepository.js';
+import WritingVideoExport from './WritingVideoExport.jsx';
 import './styles/admin.css';
 
 const ADMIN_PASSWORD_KEY = 'ppanzziri_admin_password';
@@ -239,6 +240,7 @@ export default function AdminApp() {
   const [writingRecords, setWritingRecords] = useState([]);
   const [writingRecordsLoading, setWritingRecordsLoading] = useState(false);
   const [writingEditDate, setWritingEditDate] = useState(new Date().toISOString().slice(0, 10));
+  const [videoExportData, setVideoExportData] = useState(null);
 
   const [recordForm, setRecordForm] = useState(emptyRecordForm);
   const [useCustomEffectiveSegments, setUseCustomEffectiveSegments] = useState(false);
@@ -968,6 +970,13 @@ export default function AdminApp() {
                     await adminRepository.createWritingRecord(payload, password);
                     setWritingNotice('등록 완료!');
                   }
+                  // Show video export popup if timelapse was included
+                  if (writingVideoFile) {
+                    setVideoExportData({
+                      record: { ...payload },
+                      videoFile: writingVideoFile,
+                    });
+                  }
                   setWritingEditId(null);
                   setWritingForm({ date: new Date().toISOString().slice(0, 10), startTime: '', endTime: '', charCount: '', topic: '', placeName: '' });
                   setWritingVideoFile(null);
@@ -1197,6 +1206,13 @@ export default function AdminApp() {
             </div>
           </div>
         </div>
+      )}
+      {videoExportData && (
+        <WritingVideoExport
+          record={videoExportData.record}
+          videoFile={videoExportData.videoFile}
+          onClose={() => setVideoExportData(null)}
+        />
       )}
     </main>
   );

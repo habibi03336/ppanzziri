@@ -81,8 +81,12 @@ export default function HomePage({ dashboard, writingData, onNavigate }) {
     return { totalMinutes, totalChars };
   }, [records, daily]);
 
+  const todayRecord = useMemo(() => {
+    return records.find((r) => r.date === todayStr) || null;
+  }, [records, todayStr]);
+
   const recentTopics = useMemo(() => {
-    const sorted = [...records].sort((a, b) => (a.date < b.date ? 1 : -1));
+    const sorted = [...records].filter((r) => r.date !== todayStr).sort((a, b) => (a.date < b.date ? 1 : -1));
     const result = [];
     for (const r of sorted) {
       for (const t of (r.topics || [])) {
@@ -92,7 +96,7 @@ export default function HomePage({ dashboard, writingData, onNavigate }) {
       if (result.length >= 5) break;
     }
     return result;
-  }, [records]);
+  }, [records, todayStr]);
 
   return (
     <section className="screen active" id="screen-home">
@@ -160,6 +164,41 @@ export default function HomePage({ dashboard, writingData, onNavigate }) {
                 <span className="hub-writing-since">2026.04.18~</span>
               </div>
             </div>
+
+            <div className="hub-writing-today">
+              {todayRecord ? (
+                <div className="hub-writing-today-done">
+                  {todayRecord.timelapse_video_url && (
+                    <div className="hub-writing-today-video">
+                      <video
+                        src={todayRecord.timelapse_video_url}
+                        muted
+                        autoPlay
+                        loop
+                        playsInline
+                        className="hub-writing-today-video-el"
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </div>
+                  )}
+                  <div className="hub-writing-today-info">
+                    <span className="hub-writing-today-date">{fmtDateShort(todayRecord.date)}</span>
+                    <span className="hub-writing-today-detail">
+                      {[todayRecord.place_name, todayRecord.start_time ? `${todayRecord.start_time}~${todayRecord.end_time || ''}` : ''].filter(Boolean).join(', ')}
+                    </span>
+                    <span className="hub-writing-today-detail">
+                      {[parseMinutes(todayRecord.start_time, todayRecord.end_time) > 0 ? `${parseMinutes(todayRecord.start_time, todayRecord.end_time)}분` : '', todayRecord.char_count ? `${fmtNumber(todayRecord.char_count)}자` : ''].filter(Boolean).join(', ')}
+                    </span>
+                    {todayRecord.topics?.length > 0 && (
+                      <span className="hub-writing-today-topics">{todayRecord.topics.join(', ')}</span>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <p className="hub-writing-today-empty">오늘은 아직 글을 쓰지 않았어요!</p>
+              )}
+            </div>
+
             {recentTopics.length > 0 && (
               <ul className="hub-writing-topics">
                 {recentTopics.map((t, i) => (

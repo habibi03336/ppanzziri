@@ -112,6 +112,7 @@ export default function WritingGlobe({ records, selected, onSelect }) {
       }
 
       marker.on('click', () => {
+        map.panTo([loc.lat, loc.lon]);
         if (onSelect) onSelect(loc);
       });
 

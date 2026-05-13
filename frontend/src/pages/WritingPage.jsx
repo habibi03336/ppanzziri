@@ -242,25 +242,33 @@ function PlaceTimelapse({ records }) {
                 preload="metadata"
               />
               <div className="writing-timelapse-hero-meta">
-                <span>{fmtDateShort(activeRecord.date)}</span>
-                {activeRecord.start_time && activeRecord.end_time && (
-                  <span>{activeRecord.start_time}~{activeRecord.end_time}</span>
-                )}
-                {activeRecord.place_name && (
-                  <span>{activeRecord.place_name}</span>
-                )}
+                <span className="writing-timelapse-meta-date">{fmtDateShort(activeRecord.date)}</span>
+                <span className="writing-timelapse-meta-detail">
+                  {[activeRecord.place_name, activeRecord.start_time ? `${activeRecord.start_time}~${activeRecord.end_time || ''}` : ''].filter(Boolean).join(', ')}
+                </span>
+                <span className="writing-timelapse-meta-detail">
+                  {[parseMinutes(activeRecord.start_time, activeRecord.end_time) > 0 ? `${parseMinutes(activeRecord.start_time, activeRecord.end_time)}분` : '', activeRecord.char_count ? `${fmtNumber(activeRecord.char_count)}자` : ''].filter(Boolean).join(', ')}
+                </span>
                 {(activeRecord.topics || []).length > 0 && (
-                  <span>{activeRecord.topics.join(', ')}</span>
+                  <span className="writing-timelapse-meta-topics">{activeRecord.topics.join(', ')}</span>
                 )}
               </div>
             </div>
           ) : (
             <div className="writing-timelapse-empty">
               {selected ? (
-                <p className="muted">
-                  {selected.place_name || fmtDateShort(selected.date)}
-                  <br />타임랩스 없음
-                </p>
+                <div className="writing-timelapse-hero-meta static">
+                  <span className="writing-timelapse-meta-date">{fmtDateShort(selected.date)}</span>
+                  <span className="writing-timelapse-meta-detail">
+                    {[selected.place_name, selected.start_time ? `${selected.start_time}~${selected.end_time || ''}` : ''].filter(Boolean).join(', ')}
+                  </span>
+                  <span className="writing-timelapse-meta-detail">
+                    {[parseMinutes(selected.start_time, selected.end_time) > 0 ? `${parseMinutes(selected.start_time, selected.end_time)}분` : '', selected.char_count ? `${fmtNumber(selected.char_count)}자` : ''].filter(Boolean).join(', ')}
+                  </span>
+                  {(selected.topics || []).length > 0 && (
+                    <span className="writing-timelapse-meta-topics">{selected.topics.join(', ')}</span>
+                  )}
+                </div>
               ) : (
                 <p className="muted">장소를 선택하세요</p>
               )}
